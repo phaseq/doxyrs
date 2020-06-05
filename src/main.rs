@@ -110,7 +110,15 @@ struct CompoundMember {
 }
 fn parse_compound_class(xml_dir: &str, ref_id: &str) -> CompoundClass {
     let file_name = xml_dir.to_owned() + ref_id + ".xml";
-    let content = std::fs::read_to_string(file_name).unwrap();
+    let content = std::fs::read_to_string(file_name);
+    /*if content.is_err() {
+        return CompoundClass {
+            ref_id: ref_id.to_owned(),
+            name: "".to_owned(),
+            sections: vec![],
+        }; // TODO: remove
+    }*/
+    let content = content.unwrap();
     let doc = Document::parse(&content).unwrap();
     let compounddef = doc
         .root_element()
@@ -132,7 +140,11 @@ fn parse_compound_class(xml_dir: &str, ref_id: &str) -> CompoundClass {
             let name = sectiondef.get_child_value("header").map(|v| v.to_owned());
             let members = sectiondef
                 .children()
-                .filter(|n| n.has_tag_name("memberdef") && n.attribute("prot").unwrap() == "public")
+                .filter(|n| {
+                    n.has_tag_name("memberdef")
+                        && n.attribute("prot").unwrap() == "public"
+                        && n.attribute("kind").unwrap() != "friend"
+                })
                 .map(|memberdef| {
                     let ref_id = memberdef.attribute("id").unwrap().to_owned();
                     let return_type = parse_text(memberdef.get_child("type").unwrap());
@@ -150,10 +162,31 @@ fn parse_compound_class(xml_dir: &str, ref_id: &str) -> CompoundClass {
                         "variable" => format!(
                             "{}{}",
                             return_type,
-                            tera::escape_html(memberdef.get_child_value("initializer").unwrap())
+                            tera::escape_html(
+                                memberdef.get_child_value("initializer").unwrap_or_default()
+                            )
                         ),
+                        "enum" => {
+                            let mut s = String::new();
+                            s.push_str(&format!("enum {} {{<br>", name.unwrap()));
+                            for value in
+                                memberdef.children().filter(|c| c.has_tag_name("enumvalue"))
+                            {
+                                s.push_str(&format!(
+                                    "&nbsp;&nbsp;&nbsp;&nbsp;{}{}<br/>",
+                                    value.get_child_value("name").unwrap(),
+                                    value.get_child_value("initializer").unwrap_or_default()
+                                ))
+                            }
+                            s.push_str("}");
+                            s
+                        }
                         //_ => format!("{}", memberdef.get_child_value("definition").unwrap()),
-                        _ => panic!("not implemented: {}", memberdef.attribute("kind").unwrap()),
+                        _ => panic!(
+                            "not implemented: {} ({})",
+                            memberdef.attribute("kind").unwrap(),
+                            ref_id
+                        ),
                     };
 
                     let description = /*if definition.contains("GetMoveDescription")*/ {
@@ -232,12 +265,17 @@ fn parse_text(node: Node) -> String {
                 }
                 s.push_str("</table>");
             }
-            "itemizedlist" => {
-                s.push_str("<ul>");
+            tag @ "itemizedlist" | tag @ "orderedlist" => {
+                let tag = match tag {
+                    "itemizedlist" => "ul",
+                    "orderedlist" => "ol",
+                    _ => unimplemented!(),
+                };
+                s.push_str(&format!("<{}>", tag));
                 for item in c.children().filter(|n| n.has_tag_name("listitem")) {
                     s.push_str(&format!("<li>{}</li>", parse_text(item)));
                 }
-                s.push_str("</ul>");
+                s.push_str(&format!("</{}>", tag));
             }
             "programlisting" => {
                 s.push_str("<pre>");
@@ -260,15 +298,18 @@ fn parse_text(node: Node) -> String {
             "emphasis" => {
                 s.push_str(&format!("<em>{}</em>", parse_text(c)));
             }
-            "verbatim" => {
+            "verbatim" | "computeroutput" => {
                 s.push_str(&format!("<pre>{}</pre>", parse_text(c)));
             }
             // html escape codes
+            "linebreak" => {
+                s.push_str("&nbsp;");
+            }
             "sp" => {
                 s.push_str("&nbsp;");
             }
-            "ndash" => {
-                s.push_str("&ndash;");
+            tag @ "ndash" | tag @ "mdash" | tag @ "zwj" => {
+                s.push_str(&format!("&{};", tag));
             }
             _ => {
                 println!("WARNING: '{}' not implemented!", c.tag_name().name());
