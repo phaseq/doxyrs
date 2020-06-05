@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>{{ name }}</title>
+</head>
+
+<style>
+    body {
+        font-family: sans-serif;
+    }
+
+    .class,
+    .member {
+        border: 1px solid #cccccc;
+        margin-bottom: 1em;
+        padding: 0.2em;
+        max-width: 800px;
+    }
+
+    .member .definition {
+        padding: 0.2em;
+        background-color: #eeeeee;
+        font-family: 'Courier New', Courier, monospace;
+    }
+
+    .member .description {
+        padding: 0 0.2em;
+        font-size: 0.85em;
+    }
+
+    .parameterlist tr td:first-child {
+        font-family: 'Courier New', Courier, monospace;
+    }
+
+    .parameterlist p {
+        margin: 0;
+        padding: 0;
+    }
+
+    .highlight-normal {
+        font-weight: normal;
+    }
+</style>
+
+<body>
+    <h1>{{ name }}</h1>
+    {% for class in classes %}
+    <div class="class">
+        <h2>{{ class.name }}</h2>
+
+        {% for section in class.sections %}
+        {% if section.name %}
+        <h3>{{section.name}}</h3>
+        {% endif %}
+        {% for member in section.members %}
+        <div class="member">
+            <div class="definition">{{member.definition | safe}}</div>
+            <div class="description">{{member.description | safe}}</div>
+        </div>
+        {% endfor %}
+        {% endfor %}
+    </div>
+    {% endfor %}
+</body>
+
+</html>
