@@ -79,7 +79,6 @@ fn parse_compound_class(parent_file: &str, xml_dir: &str, ref_id: &str) -> Optio
 
     if let Some(main_header) = compounddef.get_child_value("includes") {
         if main_header != parent_file {
-            println!("skipping {} -> {}", parent_file, ref_id);
             return None; // list class just in the main header, not for forward decls
         }
     }

@@ -26,13 +26,13 @@ fn main() {
         .filter(|n| n.has_tag_name("compound") && n.attribute("kind").unwrap() == "file")
         .par_bridge()
         .filter_map(|compound| {
-            let name = compound
+            /*let name = compound
                 .children()
                 .find(|n| n.has_tag_name("name"))
                 .unwrap()
                 .text()
                 .unwrap();
-            /*if name != "mwMachSimVerifier.hpp" {
+            if name != "mwMachSimVerifier.hpp" {
                 return None;
             }*/
             let ref_id = compound.attribute("refid").unwrap();
@@ -44,7 +44,7 @@ fn main() {
     tera.register_filter("reflink", generate_ref_linker(&html_dir, &files));
 
     for file in &files {
-        let file_name = format!("{}/{}.html", html_dir, file.ref_id);
+        let file_name = format!("{}{}.html", html_dir, file.ref_id);
         write_compound_file(&tera, &file_name, &file);
     }
 }
@@ -52,7 +52,7 @@ fn main() {
 fn generate_ref_linker(html_dir: &str, files: &[parser::File]) -> impl tera::Filter {
     let mut ref_to_path = std::collections::HashMap::<String, String>::new();
     for file in files {
-        let filename = format!("{}/{}.html", html_dir, file.ref_id);
+        let filename = format!("{}{}.html", html_dir, file.ref_id);
         ref_to_path.insert(file.ref_id.clone(), filename.clone());
         for class in &file.classes {
             ref_to_path.insert(
