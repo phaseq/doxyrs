@@ -1,6 +1,8 @@
 use roxmltree::{Document, Node};
 use serde::Serialize;
 
+// TODOs: mwVerifierNestedEnums.hpp
+
 #[derive(Serialize)]
 pub struct Page {
     pub ref_id: String,
@@ -12,11 +14,11 @@ pub struct Page {
 pub struct File {
     pub ref_id: String,
     pub name: String,
-    pub classes: Vec<Class>,
+    pub scopes: Vec<Scope>,
 }
 
 #[derive(Serialize)]
-pub struct Class {
+pub struct Scope {
     pub ref_id: String,
     pub name: String,
     pub kind: String,
@@ -72,14 +74,16 @@ pub fn parse_compound_file(xml_dir: &str, ref_id: &str) -> File {
         .unwrap()
         .to_owned();
 
-    let mut classes = vec![];
+    let mut scopes = vec![];
 
     for node in compounddef.children() {
         match node.tag_name().name() {
-            "innerclass" => {
-                let ref_id = node.attribute("refid").unwrap();
-                if let Some(class) = parse_compound_class(&name, xml_dir, ref_id) {
-                    classes.push(class);
+            "innerclass" | "innernamespace" => {
+                let inner_ref_id = node.attribute("refid").unwrap();
+                if let Some(scope) = parse_compound_scope(&name, xml_dir, inner_ref_id) {
+                    if !scope.sections.is_empty() {
+                        scopes.push(scope);
+                    }
                 }
             }
             _ => {} // TODO: fail here
@@ -88,11 +92,11 @@ pub fn parse_compound_file(xml_dir: &str, ref_id: &str) -> File {
     File {
         ref_id: ref_id.to_owned(),
         name,
-        classes,
+        scopes,
     }
 }
 
-fn parse_compound_class(parent_file: &str, xml_dir: &str, ref_id: &str) -> Option<Class> {
+fn parse_compound_scope(parent_file_name: &str, xml_dir: &str, ref_id: &str) -> Option<Scope> {
     let file_name = xml_dir.to_owned() + ref_id + ".xml";
     let content = std::fs::read_to_string(file_name);
     if content.is_err() {
@@ -106,16 +110,10 @@ fn parse_compound_class(parent_file: &str, xml_dir: &str, ref_id: &str) -> Optio
         .find(|n| n.has_tag_name("compounddef"))
         .unwrap();
 
-    if let Some(main_header) = compounddef.get_child_value("includes") {
-        if main_header != parent_file {
-            return None; // list class just in the main header, not for forward decls
-        }
-    }
-
     let ref_id = compounddef.attribute("id").unwrap().to_owned();
     let kind = compounddef.attribute("kind").unwrap().to_owned();
 
-    let name = render_class_name(&compounddef.get_child_value("compoundname").unwrap());
+    let name = render_scope_name(&compounddef.get_child_value("compoundname").unwrap());
 
     let sections = compounddef
         .children()
@@ -128,13 +126,19 @@ fn parse_compound_class(parent_file: &str, xml_dir: &str, ref_id: &str) -> Optio
                     n.has_tag_name("memberdef")
                         && n.attribute("prot").unwrap() == "public"
                         && n.attribute("kind").unwrap() != "friend"
+                        && n.get_child("location")
+                            .unwrap()
+                            .attribute("file")
+                            .unwrap()
+                            .ends_with(parent_file_name)
                 })
                 .map(parse_member)
                 .collect();
             Section { name, members }
         })
+        .filter(|s| !s.members.is_empty())
         .collect();
-    Some(Class {
+    Some(Scope {
         ref_id,
         name,
         kind,
@@ -142,7 +146,7 @@ fn parse_compound_class(parent_file: &str, xml_dir: &str, ref_id: &str) -> Optio
     })
 }
 
-fn render_class_name(name: &str) -> String {
+fn render_scope_name(name: &str) -> String {
     let mut name = tera::escape_html(name).replace("::", "::&#8203;");
     if let Some(pos) = name.rfind("::&#8203;") {
         name.insert_str(pos + 2, "</span><span class=\"name_part\">");
@@ -350,6 +354,10 @@ fn parse_text(node: Node) -> String {
                     c.attribute("class").unwrap(),
                     parse_text(c)
                 ));
+            }
+            "image" => {
+                let path = c.attribute("name").unwrap();
+                s.push_str(&format!("<img src=\"doxyimg://{}\" />", path))
             }
             // tag pass-through
             "bold" => {
