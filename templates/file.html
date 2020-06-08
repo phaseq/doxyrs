@@ -55,8 +55,8 @@
         {% endif %}
         {% for member in section.members %}
         <div class="member">
-            <div class="definition">{{member.definition | safe}}</div>
-            <div class="description">{{member.description | safe}}</div>
+            <div class="definition">{{member.definition | reflink | safe}}</div>
+            <div class="description">{{member.description | reflink | safe}}</div>
         </div>
         {% endfor %}
         {% endfor %}
