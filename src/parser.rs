@@ -170,7 +170,7 @@ fn parse_member(memberdef: Node) -> Member {
         ),
         "function" => format!("<span class=\"member_name\">{}</span>{}", name, args),
         "typedef" => format!(
-            "using <span class=\"member_name\">{}</span> = <span class=\"type\">{}</span>",
+            "<span class=\"keyword\">using</span> <span class=\"member_name\">{}</span> = <span class=\"type\">{}</span>",
             name, return_type
         ),
         "variable" => format!(
@@ -181,10 +181,10 @@ fn parse_member(memberdef: Node) -> Member {
         ),
         "enum" => {
             let mut s = String::new();
-            s.push_str(&format!("enum {} {{<br>", name));
+            s.push_str(&format!("<span class=\"keyword\">enum</span> <span class=\"member_name\">{}</span> {{<br>", name));
             for value in memberdef.children().filter(|c| c.has_tag_name("enumvalue")) {
                 s.push_str(&format!(
-                    "&nbsp;&nbsp;&nbsp;&nbsp;{} {}<br/>",
+                    "&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"declname\">{}</span> <span class=\"defval\">{}</span><br/>",
                     value.get_child_value("name").unwrap(),
                     value.get_child_value("initializer").unwrap_or_default()
                 ))
