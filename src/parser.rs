@@ -177,7 +177,7 @@ fn parse_member(memberdef: Node) -> Member {
         .map(|v| tera::escape_html(v))
         .unwrap();
     let template = render_templateparamlist(memberdef);
-    let args = render_member_args(memberdef);
+    let args = render_function_args(memberdef);
 
     let definition = match memberdef.attribute("kind").unwrap() {
         "function" if !return_type.is_empty() => format!(
@@ -252,7 +252,7 @@ fn render_templateparamlist(memberdef: Node) -> String {
     }
 }
 
-fn render_member_args(memberdef: Node) -> String {
+fn render_function_args(memberdef: Node) -> String {
     let args: Vec<_> = memberdef
         .children()
         .filter(|n| n.has_tag_name("param"))
