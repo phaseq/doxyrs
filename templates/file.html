@@ -19,7 +19,8 @@
     }
 
     .kind_part,
-    .namespace_part {
+    .namespace_part,
+    .scope>h2>.templateparamlist {
         color: #aaaaaa;
     }
 
@@ -110,7 +111,7 @@
     {% for scope in scopes %}
     <a name="{{scope.ref_id}}"></a>
     <div class="scope">
-        <h2><span class="kind_part">{{scope.kind}}</span> {{ scope.name | safe }}</h2>
+        <h2>{{ scope.name | safe }}</h2>
 
         {% for section in scope.sections %}
         {% if section.name %}

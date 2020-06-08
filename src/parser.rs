@@ -113,7 +113,12 @@ fn parse_compound_scope(parent_file_name: &str, xml_dir: &str, ref_id: &str) -> 
     let ref_id = compounddef.attribute("id").unwrap().to_owned();
     let kind = compounddef.attribute("kind").unwrap().to_owned();
 
-    let name = render_scope_name(&compounddef.get_child_value("compoundname").unwrap());
+    let name = format!(
+        "{} <span class=\"kind_part\">{}</span> {}",
+        render_templateparamlist(compounddef),
+        kind,
+        render_scope_name(&compounddef.get_child_value("compoundname").unwrap())
+    );
 
     let sections = compounddef
         .children()
@@ -165,7 +170,7 @@ fn parse_member(memberdef: Node) -> Member {
         .get_child_value("name")
         .map(|v| tera::escape_html(v))
         .unwrap();
-    let template = render_member_template(memberdef);
+    let template = render_templateparamlist(memberdef);
     let args = render_member_args(memberdef);
 
     let definition = match memberdef.attribute("kind").unwrap() {
@@ -217,7 +222,7 @@ fn parse_member(memberdef: Node) -> Member {
     }
 }
 
-fn render_member_template(memberdef: Node) -> String {
+fn render_templateparamlist(memberdef: Node) -> String {
     if let Some(templateparamlist) = memberdef.get_child("templateparamlist") {
         let mut s = String::new();
         for param in templateparamlist
