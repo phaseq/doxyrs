@@ -12,6 +12,7 @@ pub struct File {
 pub struct Class {
     pub ref_id: String,
     pub name: String,
+    pub kind: String,
     pub sections: Vec<Section>,
 }
 
@@ -84,11 +85,9 @@ fn parse_compound_class(parent_file: &str, xml_dir: &str, ref_id: &str) -> Optio
     }
 
     let ref_id = compounddef.attribute("id").unwrap().to_owned();
+    let kind = compounddef.attribute("kind").unwrap().to_owned();
 
-    let name = compounddef
-        .get_child_value("compoundname")
-        .unwrap()
-        .to_owned();
+    let name = render_class_name(&compounddef.get_child_value("compoundname").unwrap());
 
     let sections = compounddef
         .children()
@@ -110,8 +109,21 @@ fn parse_compound_class(parent_file: &str, xml_dir: &str, ref_id: &str) -> Optio
     Some(Class {
         ref_id,
         name,
+        kind,
         sections,
     })
+}
+
+fn render_class_name(name: &str) -> String {
+    let mut name = tera::escape_html(name).replace("::", "::&#8203;");
+    if let Some(pos) = name.rfind("::&#8203;") {
+        name.insert_str(pos + 2, "</span><span class=\"name_part\">");
+        name.insert_str(0, "<span class=\"namespace_part\">");
+    } else {
+        name.insert_str(0, "<span class=\"name_part\">");
+    }
+    name.push_str("</span>");
+    name
 }
 
 fn parse_member(memberdef: Node) -> Member {
@@ -121,18 +133,20 @@ fn parse_member(memberdef: Node) -> Member {
         .get_child_value("name")
         .map(|v| tera::escape_html(v))
         .unwrap();
-    let args = memberdef
-        .get_child_value("argsstring")
-        .map(|v| tera::escape_html(v)); // TODO: extract from param struct
+    let args = render_member_args(memberdef);
 
     let definition = match memberdef.attribute("kind").unwrap() {
-        "function" if !return_type.is_empty() => {
-            format!("{}{} -> {}", name, args.unwrap(), return_type)
-        }
-        "function" => format!("{}{}", name, args.unwrap()),
-        "typedef" => format!("using {} = {}", name, return_type),
+        "function" if !return_type.is_empty() => format!(
+            "<span class=\"member_name\">{}</span>{} → <span class=\"type\">{}</span>",
+            name, args, return_type
+        ),
+        "function" => format!("<span class=\"member_name\">{}</span>{}", name, args),
+        "typedef" => format!(
+            "using <span class=\"member_name\">{}</span> = <span class=\"type\">{}</span>",
+            name, return_type
+        ),
         "variable" => format!(
-            "{} {}{}",
+            "<span class=\"type\">{}</span> <span class=\"member_name\">{}</span> <span class=\"defval\">{}</span>",
             return_type,
             name,
             tera::escape_html(memberdef.get_child_value("initializer").unwrap_or_default())
@@ -142,7 +156,7 @@ fn parse_member(memberdef: Node) -> Member {
             s.push_str(&format!("enum {} {{<br>", name));
             for value in memberdef.children().filter(|c| c.has_tag_name("enumvalue")) {
                 s.push_str(&format!(
-                    "&nbsp;&nbsp;&nbsp;&nbsp;{}{}<br/>",
+                    "&nbsp;&nbsp;&nbsp;&nbsp;{} {}<br/>",
                     value.get_child_value("name").unwrap(),
                     value.get_child_value("initializer").unwrap_or_default()
                 ))
@@ -168,6 +182,55 @@ fn parse_member(memberdef: Node) -> Member {
         definition,
         description,
     }
+}
+
+fn render_member_args(memberdef: Node) -> String {
+    let args: Vec<_> = memberdef
+        .children()
+        .filter(|n| n.has_tag_name("param"))
+        .map(|param| {
+            let mut result = format!(
+                "<span class=\"type\">{}</span>",
+                parse_text(param.get_child("type").unwrap()).replace(" &amp;", "&amp; ")
+            );
+            if let Some(declname) = param.get_child("declname") {
+                result.push_str(&format!(
+                    " <span class=\"declname\">{}</span>",
+                    parse_text(declname)
+                ));
+            }
+            if let Some(defval) = param.get_child("defval") {
+                result.push_str(&format!(
+                    " = <span class=\"defval\">{}</span>",
+                    parse_text(defval)
+                ));
+            }
+            result
+        })
+        .collect();
+
+    let is_multiline = !args.is_empty(); // args.iter().map(|a| a.len() + 2).sum::<usize>() >= 60;
+    let newline = "<br/>&nbsp;&nbsp;&nbsp;&nbsp;";
+    let mut s = "(".to_owned();
+    if is_multiline {
+        s.push_str(newline);
+    }
+    let mut is_first = true;
+    for arg in args.iter() {
+        if !is_first {
+            if is_multiline {
+                s.push(',');
+                s.push_str(newline);
+            } else {
+                s.push_str(", ");
+            }
+        } else {
+            is_first = false;
+        }
+        s.push_str(arg);
+    }
+    s.push(')');
+    s
 }
 
 fn parse_text(node: Node) -> String {

@@ -18,10 +18,37 @@
         max-width: 800px;
     }
 
+    .kind_part,
+    .namespace_part {
+        color: #aaaaaa;
+    }
+
+    .name_part {
+        display: block;
+    }
+
     .member .definition {
         padding: 0.2em;
         background-color: #eeeeee;
         font-family: 'Courier New', Courier, monospace;
+    }
+
+    .member_name {
+        color: saddlebrown;
+    }
+
+    .type,
+    .type a {
+        color: teal;
+    }
+
+    .declname {
+        color: royalblue;
+    }
+
+    .defval,
+    .defval a {
+        color: gray;
     }
 
     .member .description {
@@ -48,7 +75,7 @@
     {% for class in classes %}
     <a name="{{class.ref_id}}"></a>
     <div class="class">
-        <h2>{{ class.name }}</h2>
+        <h2><span class="kind_part">{{class.kind}}</span> {{ class.name | safe }}</h2>
 
         {% for section in class.sections %}
         {% if section.name %}
