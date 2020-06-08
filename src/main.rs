@@ -27,7 +27,7 @@ fn main() {
         .find(|n| n.has_tag_name("doxygenindex"))
         .unwrap();
 
-    let mut compounds: Vec<Compound> = index
+    let compounds: Vec<Compound> = index
         .children()
         .filter(|n| {
             n.has_tag_name("compound")
@@ -69,9 +69,9 @@ fn main() {
     let tera = tera::Tera::new("templates/*.html").unwrap();
     let relink = create_relinker(&compounds, html_dir, img_dir);
 
-    for compound in &mut compounds {
+    compounds.into_iter().par_bridge().for_each(|compound| {
         match compound {
-            Compound::File(file) => {
+            Compound::File(mut file) => {
                 // update deferred links
                 for scope in &mut file.scopes {
                     for section in &mut scope.sections {
@@ -85,7 +85,7 @@ fn main() {
                 let file_name = format!("{}{}.html", html_dir, file.ref_id);
                 write_compound_file(&tera, &file_name, &file);
             }
-            Compound::Page(page) => {
+            Compound::Page(mut page) => {
                 // update deferred links
                 page.description = relink(&page.description);
 
@@ -93,14 +93,14 @@ fn main() {
                 write_compound_page(&tera, &file_name, &page);
             }
         }
-    }
+    });
 }
 
 fn create_relinker(
     compounds: &[Compound],
     html_dir: &str,
     img_dir: &str,
-) -> Box<dyn Fn(&str) -> String> {
+) -> Box<dyn Fn(&str) -> String + Sync> {
     let re_refs = regex::Regex::new("refid://([^\"]*)").unwrap();
     let re_imgs = regex::Regex::new("doxyimg://([^\"]*)").unwrap();
     let ref_to_path = create_ref_to_path_map(html_dir, compounds);
