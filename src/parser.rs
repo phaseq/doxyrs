@@ -2,6 +2,13 @@ use roxmltree::{Document, Node};
 use serde::Serialize;
 
 #[derive(Serialize)]
+pub struct Page {
+    pub ref_id: String,
+    pub title: String,
+    pub description: String,
+}
+
+#[derive(Serialize)]
 pub struct File {
     pub ref_id: String,
     pub name: String,
@@ -27,6 +34,27 @@ pub struct Member {
     pub ref_id: String,
     pub definition: String,
     pub description: String,
+}
+
+pub fn parse_compound_page(xml_dir: &str, ref_id: &str) -> Page {
+    let file_name = xml_dir.to_owned() + ref_id + ".xml";
+    let content = std::fs::read_to_string(file_name).unwrap();
+    let doc = Document::parse(&content).unwrap();
+    let compounddef = doc
+        .root_element()
+        .children()
+        .find(|n| n.tag_name().name() == "compounddef")
+        .unwrap();
+
+    let title = compounddef.get_child_value("title").unwrap().to_owned();
+
+    let description = parse_text(compounddef.get_child("detaileddescription").unwrap());
+
+    Page {
+        ref_id: ref_id.to_owned(),
+        title,
+        description,
+    }
 }
 
 pub fn parse_compound_file(xml_dir: &str, ref_id: &str) -> File {
@@ -330,14 +358,42 @@ fn parse_text(node: Node) -> String {
             "emphasis" => {
                 s.push_str(&format!("<em>{}</em>", parse_text(c)));
             }
-            "verbatim" | "computeroutput" => {
+            "verbatim" | "preformatted" => {
                 s.push_str(&format!("<pre>{}</pre>", parse_text(c)));
+            }
+            "computeroutput" => {
+                s.push_str(&format!("<tt>{}</tt>", parse_text(c)));
+            }
+            "superscript" => {
+                s.push_str(&format!("<sup>{}</sup>", parse_text(c)));
+            }
+            "subscript" => {
+                s.push_str(&format!("<sub>{}</sub>", parse_text(c)));
+            }
+            tag @ "sect1" | tag @ "sect2" | tag @ "sect3" | tag @ "sect4" | tag @ "sect5" => {
+                let title = c.children().find(|n| n.has_tag_name("title")).unwrap();
+                let level = tag.chars().nth(4).unwrap().to_digit(10).unwrap() + 1;
+                let id = c.attribute("id").unwrap();
+                // TODO: generate proper anchors. Currently:
+                // sect.id = md_Developer_guide_Cutsim_Gouge_excess_1cutsim_ge_draw_mode_offset
+                // ulink.url = #cutsim_ge_draw_mode_offset
+                s.push_str(&format!("<a name=\"{}\"></a>", id));
+                s.push_str(&format!("<h{}>{}</h{}>", level, parse_text(title), level));
+                s.push_str(&parse_text(c));
+            }
+            "title" => {} // handled by sectN
+            "heading" => {
+                let level = c.attribute("level").unwrap().parse::<usize>().unwrap();
+                s.push_str(&format!("<h{}>{}</h{}>", level, parse_text(c), level));
             }
             // html escape codes
             "linebreak" => {
-                s.push_str("&nbsp;");
+                s.push_str("<br/>");
             }
-            "sp" => {
+            "hruler" => {
+                s.push_str("<hr/>");
+            }
+            "sp" | "nonbreakablespace" => {
                 s.push_str("&nbsp;");
             }
             tag @ "ndash" | tag @ "mdash" | tag @ "zwj" => {

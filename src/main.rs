@@ -5,6 +5,11 @@ use tera::Tera;
 
 mod parser;
 
+enum Compound {
+    File(parser::File),
+    Page(parser::Page),
+}
+
 fn main() {
     let xml_dir = "/home/fabianb/Dev/Moduleworks/dev/tools/doxysync/xml/";
     let html_dir = "/home/fabianb/Dev/Moduleworks/dev/tools/doxysync/html/";
@@ -21,9 +26,14 @@ fn main() {
         .find(|n| n.has_tag_name("doxygenindex"))
         .unwrap();
 
-    let files: Vec<parser::File> = index
+    let compounds: Vec<Compound> = index
         .children()
-        .filter(|n| n.has_tag_name("compound") && n.attribute("kind").unwrap() == "file")
+        .filter(|n| {
+            n.has_tag_name("compound")
+                && n.attribute("kind")
+                    .map(|kind| kind == "file" || kind == "page")
+                    .unwrap()
+        })
         .par_bridge()
         .filter_map(|compound| {
             /*let name = compound
@@ -36,36 +46,62 @@ fn main() {
                 return None;
             }*/
             let ref_id = compound.attribute("refid").unwrap();
-            Some(parser::parse_compound_file(&xml_dir, ref_id))
+            let kind = compound.attribute("kind").unwrap();
+            match kind {
+                "file" => Some(Compound::File(parser::parse_compound_file(
+                    &xml_dir, ref_id,
+                ))),
+                "page" => Some(Compound::Page(parser::parse_compound_page(
+                    &xml_dir, ref_id,
+                ))),
+                _ => unimplemented!(),
+            }
         })
         .collect();
 
     let mut tera = tera::Tera::new("templates/*.html").unwrap();
-    tera.register_filter("reflink", generate_ref_linker(&html_dir, &files));
+    tera.register_filter("reflink", generate_ref_linker(&html_dir, &compounds));
 
-    for file in &files {
-        let file_name = format!("{}{}.html", html_dir, file.ref_id);
-        write_compound_file(&tera, &file_name, &file);
+    for compound in &compounds {
+        match compound {
+            Compound::File(file) => {
+                let file_name = format!("{}{}.html", html_dir, file.ref_id);
+                write_compound_file(&tera, &file_name, &file);
+            }
+            Compound::Page(page) => {
+                let file_name = format!("{}{}.html", html_dir, page.ref_id);
+                write_compound_page(&tera, &file_name, &page);
+            }
+        }
     }
 }
 
-fn generate_ref_linker(html_dir: &str, files: &[parser::File]) -> impl tera::Filter {
+fn generate_ref_linker(html_dir: &str, compounds: &[Compound]) -> impl tera::Filter {
     let mut ref_to_path = std::collections::HashMap::<String, String>::new();
-    for file in files {
-        let filename = format!("{}{}.html", html_dir, file.ref_id);
-        ref_to_path.insert(file.ref_id.clone(), filename.clone());
-        for class in &file.classes {
-            ref_to_path.insert(
-                class.ref_id.clone(),
-                format!("{}#{}", filename, class.ref_id),
-            );
-            for section in &class.sections {
-                for member in &section.members {
+    for compound in compounds {
+        match compound {
+            Compound::File(file) => {
+                let filename = format!("{}{}.html", html_dir, file.ref_id);
+                ref_to_path.insert(file.ref_id.clone(), filename.clone());
+                for class in &file.classes {
                     ref_to_path.insert(
-                        member.ref_id.clone(),
-                        format!("{}#{}", filename, member.ref_id),
+                        class.ref_id.clone(),
+                        format!("{}#{}", filename, class.ref_id),
                     );
+                    for section in &class.sections {
+                        for member in &section.members {
+                            ref_to_path.insert(
+                                member.ref_id.clone(),
+                                format!("{}#{}", filename, member.ref_id),
+                            );
+                        }
+                    }
                 }
+            }
+            Compound::Page(page) => {
+                let filename = format!("{}{}.html", html_dir, page.ref_id);
+                ref_to_path.insert(page.ref_id.clone(), filename.clone());
+                // TODO: add paragraph links
             }
         }
     }
@@ -97,6 +133,14 @@ fn generate_ref_linker(html_dir: &str, files: &[parser::File]) -> impl tera::Fil
 fn write_compound_file(tera: &Tera, file_name: &str, file: &parser::File) {
     let content = tera
         .render("file.html", &tera::Context::from_serialize(file).unwrap())
+        .unwrap();
+    let mut f = std::fs::File::create(file_name).unwrap();
+    f.write_all(content.as_bytes()).unwrap();
+}
+
+fn write_compound_page(tera: &Tera, file_name: &str, page: &parser::Page) {
+    let content = tera
+        .render("page.html", &tera::Context::from_serialize(page).unwrap())
         .unwrap();
     let mut f = std::fs::File::create(file_name).unwrap();
     f.write_all(content.as_bytes()).unwrap();
