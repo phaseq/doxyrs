@@ -165,7 +165,7 @@ fn parse_member(memberdef: Node) -> Member {
 
     let definition = match memberdef.attribute("kind").unwrap() {
         "function" if !return_type.is_empty() => format!(
-            "<span class=\"member_name\">{}</span>{} → <span class=\"type\">{}</span>",
+            "<span class=\"member_name\">{}</span>{} → <span class=\"rettype\">{}</span>",
             name, args, return_type
         ),
         "function" => format!("<span class=\"member_name\">{}</span>{}", name, args),
@@ -304,7 +304,7 @@ fn parse_text(node: Node) -> String {
                         let description =
                             parse_text(item.get_child("parameterdescription").unwrap());
                         s.push_str(&format!(
-                            "<tr><td>{}:</td><td>{}</td></tr>",
+                            "<tr><td><span class=\"declname\">{}</span>:</td><td>{}</td></tr>",
                             tera::escape_html(name),
                             description
                         ));
