@@ -10,7 +10,7 @@
         font-family: sans-serif;
     }
 
-    .class,
+    .scope,
     .member {
         border: 1px solid #cccccc;
         margin-bottom: 1em;
@@ -35,6 +35,11 @@
 
     .member_name {
         color: #9a6e31;
+    }
+
+    .templateparamlist {
+        color: gray;
+        display: block;
     }
 
     .keyword {
@@ -102,12 +107,12 @@
 
 <body>
     <h1>{{ name }}</h1>
-    {% for class in classes %}
-    <a name="{{class.ref_id}}"></a>
-    <div class="class">
-        <h2><span class="kind_part">{{class.kind}}</span> {{ class.name | safe }}</h2>
+    {% for scope in scopes %}
+    <a name="{{scope.ref_id}}"></a>
+    <div class="scope">
+        <h2><span class="kind_part">{{scope.kind}}</span> {{ scope.name | safe }}</h2>
 
-        {% for section in class.sections %}
+        {% for section in scope.sections %}
         {% if section.name %}
         <h3>{{section.name}}</h3>
         {% endif %}

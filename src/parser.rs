@@ -165,17 +165,18 @@ fn parse_member(memberdef: Node) -> Member {
         .get_child_value("name")
         .map(|v| tera::escape_html(v))
         .unwrap();
+    let template = render_member_template(memberdef);
     let args = render_member_args(memberdef);
 
     let definition = match memberdef.attribute("kind").unwrap() {
         "function" if !return_type.is_empty() => format!(
-            "<span class=\"member_name\">{}</span>{} → <span class=\"rettype\">{}</span>",
-            name, args, return_type
+            "{}<span class=\"member_name\">{}</span>{} → <span class=\"rettype\">{}</span>",
+            template, name, args, return_type
         ),
-        "function" => format!("<span class=\"member_name\">{}</span>{}", name, args),
+        "function" => format!("{}<span class=\"member_name\">{}</span>{}", template, name, args),
         "typedef" => format!(
-            "<span class=\"keyword\">using</span> <span class=\"member_name\">{}</span> = <span class=\"type\">{}</span>",
-            name, return_type
+            "{}<span class=\"keyword\">using</span> <span class=\"member_name\">{}</span> = <span class=\"type\">{}</span>",
+            template, name, return_type
         ),
         "variable" => format!(
             "<span class=\"type\">{}</span> <span class=\"member_name\">{}</span> <span class=\"defval\">{}</span>",
@@ -216,6 +217,30 @@ fn parse_member(memberdef: Node) -> Member {
     }
 }
 
+fn render_member_template(memberdef: Node) -> String {
+    if let Some(templateparamlist) = memberdef.get_child("templateparamlist") {
+        let mut s = String::new();
+        for param in templateparamlist
+            .children()
+            .filter(|n| n.has_tag_name("param"))
+        {
+            if !s.is_empty() {
+                s.push_str(", ");
+            }
+            s.push_str(param.get_child_value("type").unwrap());
+            if let Some(defval) = param.get_child_value("defval") {
+                s.push_str(&defval);
+            }
+        }
+        format!(
+            "<span class=\"templateparamlist\">template &lt;{}&gt;</span>",
+            s
+        )
+    } else {
+        "".to_owned()
+    }
+}
+
 fn render_member_args(memberdef: Node) -> String {
     let args: Vec<_> = memberdef
         .children()
@@ -223,7 +248,9 @@ fn render_member_args(memberdef: Node) -> String {
         .map(|param| {
             let mut result = format!(
                 "<span class=\"type\">{}</span>",
-                parse_text(param.get_child("type").unwrap()).replace(" &amp;", "&amp; ")
+                parse_text(param.get_child("type").unwrap())
+                    .replace(" &amp;", "&amp;")
+                    .replace(" *", "*")
             );
             if let Some(declname) = param.get_child("declname") {
                 result.push_str(&format!(
