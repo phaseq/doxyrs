@@ -28,6 +28,7 @@ pub struct Scope {
 #[derive(Serialize)]
 pub struct Section {
     pub name: Option<String>,
+    pub description: Option<String>,
     pub members: Vec<Member>,
 }
 
@@ -125,6 +126,7 @@ fn parse_compound_scope(parent_file_name: &str, xml_dir: &str, ref_id: &str) -> 
         .filter(|n| n.has_tag_name("sectiondef"))
         .map(|sectiondef| {
             let name = sectiondef.get_child_value("header").map(|v| v.to_owned());
+            let description = sectiondef.get_child("description").map(|d| parse_text(d));
             let members = sectiondef
                 .children()
                 .filter(|n| {
@@ -139,7 +141,11 @@ fn parse_compound_scope(parent_file_name: &str, xml_dir: &str, ref_id: &str) -> 
                 })
                 .map(parse_member)
                 .collect();
-            Section { name, members }
+            Section {
+                name,
+                description,
+                members,
+            }
         })
         .filter(|s| !s.members.is_empty())
         .collect();

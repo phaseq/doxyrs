@@ -117,6 +117,9 @@
         {% if section.name %}
         <h3>{{section.name}}</h3>
         {% endif %}
+        {% if section.description %}
+        {{ section.description | safe }}
+        {% endif %}
         {% for member in section.members %}
         <a name="{{member.ref_id}}"></a>
         <div class="member">
