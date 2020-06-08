@@ -1,4 +1,4 @@
-//use rayon::prelude::*;
+use rayon::prelude::*;
 use roxmltree::Document;
 use std::io::Write;
 use tera::Tera;
@@ -24,7 +24,7 @@ fn main() {
     let files: Vec<parser::File> = index
         .children()
         .filter(|n| n.has_tag_name("compound") && n.attribute("kind").unwrap() == "file")
-        //.par_bridge()
+        .par_bridge()
         .filter_map(|compound| {
             let name = compound
                 .children()
@@ -32,9 +32,9 @@ fn main() {
                 .unwrap()
                 .text()
                 .unwrap();
-            if name != "mwMachSimVerifier.hpp" {
+            /*if name != "mwMachSimVerifier.hpp" {
                 return None;
-            }
+            }*/
             let ref_id = compound.attribute("refid").unwrap();
             Some(parser::parse_compound_file(&xml_dir, ref_id))
         })
@@ -59,6 +59,14 @@ fn generate_ref_linker(html_dir: &str, files: &[parser::File]) -> impl tera::Fil
                 class.ref_id.clone(),
                 format!("{}#{}", filename, class.ref_id),
             );
+            for section in &class.sections {
+                for member in &section.members {
+                    ref_to_path.insert(
+                        member.ref_id.clone(),
+                        format!("{}#{}", filename, member.ref_id),
+                    );
+                }
+            }
         }
     }
 

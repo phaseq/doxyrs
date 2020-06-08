@@ -46,6 +46,7 @@
 <body>
     <h1>{{ name }}</h1>
     {% for class in classes %}
+    <a name="{{class.ref_id}}"></a>
     <div class="class">
         <h2>{{ class.name }}</h2>
 
@@ -54,6 +55,7 @@
         <h3>{{section.name}}</h3>
         {% endif %}
         {% for member in section.members %}
+        <a name="{{member.ref_id}}"></a>
         <div class="member">
             <div class="definition">{{member.definition | reflink | safe}}</div>
             <div class="description">{{member.description | reflink | safe}}</div>

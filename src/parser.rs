@@ -49,8 +49,9 @@ pub fn parse_compound_file(xml_dir: &str, ref_id: &str) -> File {
         match node.tag_name().name() {
             "innerclass" => {
                 let ref_id = node.attribute("refid").unwrap();
-                let class = parse_compound_class(xml_dir, ref_id);
-                classes.push(class);
+                if let Some(class) = parse_compound_class(&name, xml_dir, ref_id) {
+                    classes.push(class);
+                }
             }
             _ => {} // TODO: fail here
         }
@@ -62,15 +63,11 @@ pub fn parse_compound_file(xml_dir: &str, ref_id: &str) -> File {
     }
 }
 
-fn parse_compound_class(xml_dir: &str, ref_id: &str) -> Class {
+fn parse_compound_class(parent_file: &str, xml_dir: &str, ref_id: &str) -> Option<Class> {
     let file_name = xml_dir.to_owned() + ref_id + ".xml";
     let content = std::fs::read_to_string(file_name);
     if content.is_err() {
-        return Class {
-            ref_id: ref_id.to_owned(),
-            name: "".to_owned(),
-            sections: vec![],
-        }; // TODO: remove
+        return None; // TODO: remove
     }
     let content = content.unwrap();
     let doc = Document::parse(&content).unwrap();
@@ -79,6 +76,13 @@ fn parse_compound_class(xml_dir: &str, ref_id: &str) -> Class {
         .children()
         .find(|n| n.has_tag_name("compounddef"))
         .unwrap();
+
+    if let Some(main_header) = compounddef.get_child_value("includes") {
+        if main_header != parent_file {
+            println!("skipping {} -> {}", parent_file, ref_id);
+            return None; // list class just in the main header, not for forward decls
+        }
+    }
 
     let ref_id = compounddef.attribute("id").unwrap().to_owned();
 
@@ -99,72 +103,71 @@ fn parse_compound_class(xml_dir: &str, ref_id: &str) -> Class {
                         && n.attribute("prot").unwrap() == "public"
                         && n.attribute("kind").unwrap() != "friend"
                 })
-                .map(|memberdef| {
-                    let ref_id = memberdef.attribute("id").unwrap().to_owned();
-                    let return_type = parse_text(memberdef.get_child("type").unwrap());
-                    let name = memberdef
-                        .get_child_value("name")
-                        .map(|v| tera::escape_html(v));
-                    let args = memberdef
-                        .get_child_value("argsstring")
-                        .map(|v| tera::escape_html(v)); // TODO: extract from param struct
-                    let definition = match memberdef.attribute("kind").unwrap() {
-                        "function" => {
-                            format!("{}{} -> {}", name.unwrap(), args.unwrap(), return_type)
-                        }
-                        "typedef" => format!("using {} = {}", name.unwrap(), return_type),
-                        "variable" => format!(
-                            "{}{}",
-                            return_type,
-                            tera::escape_html(
-                                memberdef.get_child_value("initializer").unwrap_or_default()
-                            )
-                        ),
-                        "enum" => {
-                            let mut s = String::new();
-                            s.push_str(&format!("enum {} {{<br>", name.unwrap()));
-                            for value in
-                                memberdef.children().filter(|c| c.has_tag_name("enumvalue"))
-                            {
-                                s.push_str(&format!(
-                                    "&nbsp;&nbsp;&nbsp;&nbsp;{}{}<br/>",
-                                    value.get_child_value("name").unwrap(),
-                                    value.get_child_value("initializer").unwrap_or_default()
-                                ))
-                            }
-                            s.push_str("}");
-                            s
-                        }
-                        //_ => format!("{}", memberdef.get_child_value("definition").unwrap()),
-                        _ => panic!(
-                            "not implemented: {} ({})",
-                            memberdef.attribute("kind").unwrap(),
-                            ref_id
-                        ),
-                    };
-
-                    let description = /*if definition.contains("GetMoveDescription")*/ {
-                        let brief = parse_text(memberdef.get_child("briefdescription").unwrap());
-                        let detailed =
-                            parse_text(memberdef.get_child("detaileddescription").unwrap());
-                        brief + &detailed
-                    } /*else {
-                        "".to_owned()
-                    }*/;
-                    Member {
-                        ref_id,
-                        definition,
-                        description,
-                    }
-                })
+                .map(parse_member)
                 .collect();
             Section { name, members }
         })
         .collect();
-    Class {
+    Some(Class {
         ref_id,
         name,
         sections,
+    })
+}
+
+fn parse_member(memberdef: Node) -> Member {
+    let ref_id = memberdef.attribute("id").unwrap().to_owned();
+    let return_type = parse_text(memberdef.get_child("type").unwrap());
+    let name = memberdef
+        .get_child_value("name")
+        .map(|v| tera::escape_html(v))
+        .unwrap();
+    let args = memberdef
+        .get_child_value("argsstring")
+        .map(|v| tera::escape_html(v)); // TODO: extract from param struct
+
+    let definition = match memberdef.attribute("kind").unwrap() {
+        "function" if !return_type.is_empty() => {
+            format!("{}{} -> {}", name, args.unwrap(), return_type)
+        }
+        "function" => format!("{}{}", name, args.unwrap()),
+        "typedef" => format!("using {} = {}", name, return_type),
+        "variable" => format!(
+            "{} {}{}",
+            return_type,
+            name,
+            tera::escape_html(memberdef.get_child_value("initializer").unwrap_or_default())
+        ),
+        "enum" => {
+            let mut s = String::new();
+            s.push_str(&format!("enum {} {{<br>", name));
+            for value in memberdef.children().filter(|c| c.has_tag_name("enumvalue")) {
+                s.push_str(&format!(
+                    "&nbsp;&nbsp;&nbsp;&nbsp;{}{}<br/>",
+                    value.get_child_value("name").unwrap(),
+                    value.get_child_value("initializer").unwrap_or_default()
+                ))
+            }
+            s.push_str("}");
+            s
+        }
+        //_ => format!("{}", memberdef.get_child_value("definition").unwrap()),
+        _ => panic!(
+            "not implemented: {} ({})",
+            memberdef.attribute("kind").unwrap(),
+            ref_id
+        ),
+    };
+
+    let description = {
+        let brief = parse_text(memberdef.get_child("briefdescription").unwrap());
+        let detailed = parse_text(memberdef.get_child("detaileddescription").unwrap());
+        brief + &detailed
+    };
+    Member {
+        ref_id,
+        definition,
+        description,
     }
 }
 
@@ -230,6 +233,19 @@ fn parse_text(node: Node) -> String {
                     s.push_str(&format!("<li>{}</li>", parse_text(item)));
                 }
                 s.push_str(&format!("</{}>", tag));
+            }
+            "table" => {
+                s.push_str("<table>");
+                for row in c.children().filter(|n| n.has_tag_name("row")) {
+                    s.push_str("<tr>");
+                    for entry in row.children().filter(|n| n.has_tag_name("entry")) {
+                        s.push_str("<td>");
+                        s.push_str(&parse_text(entry));
+                        s.push_str("</td>");
+                    }
+                    s.push_str("</tr>");
+                }
+                s.push_str("</table>");
             }
             "programlisting" => {
                 s.push_str("<pre>");
