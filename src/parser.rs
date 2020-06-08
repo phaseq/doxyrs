@@ -315,7 +315,7 @@ fn parse_text(node: Node) -> String {
             }
             "simplesect" => {
                 s.push_str(&format!(
-                    "{}: {}",
+                    "<p>{}: {}</p>",
                     c.attribute("kind").unwrap(),
                     parse_text(c.get_child("para").unwrap())
                 ));
