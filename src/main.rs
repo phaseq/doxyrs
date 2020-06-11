@@ -1,22 +1,34 @@
 use rayon::prelude::*;
 use roxmltree::Document;
 use std::io::Write;
+use std::path::{Path, PathBuf};
+use structopt::StructOpt;
 use tera::Tera;
 
 mod parser;
 
-enum Compound {
-    File(parser::File),
-    Page(parser::Page),
+#[derive(StructOpt)]
+#[structopt(name = "doxyrs")]
+struct Cli {
+    /// Directory marking the doxygen XML output directory
+    #[structopt(long)]
+    xml: String,
+
+    /// Path to directory that captures the output HTML
+    #[structopt(short, long)]
+    output: String,
 }
 
 fn main() {
-    let xml_dir = "/home/fabianb/Dev/Moduleworks/dev/tools/doxysync/xml/";
-    let img_dir = "/home/fabianb/Dev/Moduleworks/dev/doc/Developer_guide/Cutsim/";
-    let html_dir = "/home/fabianb/Dev/Moduleworks/dev/tools/doxysync/html/";
+    let opt = Cli::from_args();
+    let xml_dir = PathBuf::from(opt.xml);
+    let html_dir = PathBuf::from(opt.output);
+    let img_dir = "./"; // TODO
+
+    std::fs::create_dir_all(&html_dir).unwrap();
 
     // read the index file
-    let index_path = xml_dir.to_owned() + "index.xml";
+    let index_path = xml_dir.join("index.xml");
     let content = std::fs::read_to_string(&index_path).unwrap();
     let doc = Document::parse(&content).unwrap();
 
@@ -67,7 +79,7 @@ fn main() {
         .collect();
 
     let tera = tera::Tera::new("templates/*.html").unwrap();
-    let relink = create_relinker(&compounds, html_dir, img_dir);
+    let relink = create_relinker(&compounds, &html_dir, img_dir);
 
     compounds.into_iter().par_bridge().for_each(|compound| {
         match compound {
@@ -82,23 +94,28 @@ fn main() {
                     }
                 }
 
-                let file_name = format!("{}{}.html", html_dir, file.ref_id);
+                let file_name = html_dir.join(format!("{}.html", file.ref_id));
                 write_compound_file(&tera, &file_name, &file);
             }
             Compound::Page(mut page) => {
                 // update deferred links
                 page.description = relink(&page.description);
 
-                let file_name = format!("{}{}.html", html_dir, page.ref_id);
+                let file_name = html_dir.join(format!("{}.html", page.ref_id));
                 write_compound_page(&tera, &file_name, &page);
             }
         }
     });
 }
 
+enum Compound {
+    File(parser::File),
+    Page(parser::Page),
+}
+
 fn create_relinker(
     compounds: &[Compound],
-    html_dir: &str,
+    html_dir: &Path,
     img_dir: &str,
 ) -> Box<dyn Fn(&str) -> String + Sync> {
     let re_refs = regex::Regex::new("refid://([^\"]*)").unwrap();
@@ -128,15 +145,16 @@ fn create_relinker(
 }
 
 fn create_ref_to_path_map(
-    html_dir: &str,
+    html_dir: &Path,
     compounds: &[Compound],
 ) -> std::collections::HashMap<String, String> {
     let mut ref_to_path = std::collections::HashMap::<String, String>::new();
     for compound in compounds {
         match compound {
             Compound::File(file) => {
-                let filename = format!("{}{}.html", html_dir, file.ref_id);
-                ref_to_path.insert(file.ref_id.clone(), filename.clone());
+                let filename = html_dir.join(format!("{}.html", file.ref_id));
+                let filename = filename.to_str().unwrap();
+                ref_to_path.insert(file.ref_id.clone(), filename.to_owned());
                 for class in &file.scopes {
                     ref_to_path.insert(
                         class.ref_id.clone(),
@@ -153,8 +171,8 @@ fn create_ref_to_path_map(
                 }
             }
             Compound::Page(page) => {
-                let filename = format!("{}{}.html", html_dir, page.ref_id);
-                ref_to_path.insert(page.ref_id.clone(), filename.clone());
+                let filename = html_dir.join(format!("{}.html", page.ref_id));
+                ref_to_path.insert(page.ref_id.clone(), filename.to_str().unwrap().to_owned());
                 // TODO: add paragraph links
             }
         }
@@ -162,18 +180,16 @@ fn create_ref_to_path_map(
     ref_to_path
 }
 
-fn write_compound_file(tera: &Tera, file_name: &str, file: &parser::File) {
-    let content = tera
-        .render("file.html", &tera::Context::from_serialize(file).unwrap())
-        .unwrap();
+fn write_compound_file(tera: &Tera, file_name: &Path, file: &parser::File) {
+    let context = tera::Context::from_serialize(file).unwrap();
+    let content = tera.render("file.html", &context).unwrap();
     let mut f = std::fs::File::create(file_name).unwrap();
     f.write_all(content.as_bytes()).unwrap();
 }
 
-fn write_compound_page(tera: &Tera, file_name: &str, page: &parser::Page) {
-    let content = tera
-        .render("page.html", &tera::Context::from_serialize(page).unwrap())
-        .unwrap();
+fn write_compound_page(tera: &Tera, file_name: &Path, page: &parser::Page) {
+    let context = tera::Context::from_serialize(page).unwrap();
+    let content = tera.render("page.html", &context).unwrap();
     let mut f = std::fs::File::create(file_name).unwrap();
     f.write_all(content.as_bytes()).unwrap();
 }

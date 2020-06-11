@@ -1,5 +1,6 @@
 use roxmltree::{Document, Node};
 use serde::Serialize;
+use std::path::Path;
 
 // TODOs: mwVerifierNestedEnums.hpp
 
@@ -39,9 +40,9 @@ pub struct Member {
     pub description: String,
 }
 
-pub fn parse_compound_page(xml_dir: &str, ref_id: &str) -> Page {
-    let file_name = xml_dir.to_owned() + ref_id + ".xml";
-    let content = std::fs::read_to_string(file_name).unwrap();
+pub fn parse_compound_page(xml_dir: &Path, ref_id: &str) -> Page {
+    let file_name = xml_dir.join(ref_id.to_owned() + ".xml");
+    let content = std::fs::read_to_string(&file_name).unwrap();
     let doc = Document::parse(&content).unwrap();
     let compounddef = doc
         .root_element()
@@ -60,8 +61,8 @@ pub fn parse_compound_page(xml_dir: &str, ref_id: &str) -> Page {
     }
 }
 
-pub fn parse_compound_file(xml_dir: &str, ref_id: &str) -> File {
-    let file_name = xml_dir.to_owned() + ref_id + ".xml";
+pub fn parse_compound_file(xml_dir: &Path, ref_id: &str) -> File {
+    let file_name = xml_dir.join(ref_id.to_owned() + ".xml");
     let content = std::fs::read_to_string(file_name).unwrap();
     let doc = Document::parse(&content).unwrap();
     let compounddef = doc
@@ -97,8 +98,8 @@ pub fn parse_compound_file(xml_dir: &str, ref_id: &str) -> File {
     }
 }
 
-fn parse_compound_scope(parent_file_name: &str, xml_dir: &str, ref_id: &str) -> Option<Scope> {
-    let file_name = xml_dir.to_owned() + ref_id + ".xml";
+fn parse_compound_scope(parent_file_name: &str, xml_dir: &Path, ref_id: &str) -> Option<Scope> {
+    let file_name = xml_dir.join(ref_id.to_owned() + ".xml");
     let content = std::fs::read_to_string(file_name);
     if content.is_err() {
         return None; // TODO: remove
