@@ -10,11 +10,11 @@ mod parser;
 #[derive(StructOpt)]
 #[structopt(name = "doxyrs")]
 struct Cli {
-    /// Directory marking the doxygen XML output directory
+    /// Directory containing the doxygen XML output
     #[structopt(long)]
     xml: String,
 
-    /// Path to directory that captures the output HTML
+    /// HTML output directory
     #[structopt(short, long)]
     output: String,
 }
