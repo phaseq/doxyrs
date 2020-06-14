@@ -1,5 +1,6 @@
 use rayon::prelude::*;
 use roxmltree::Document;
+use serde::Serialize;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
@@ -79,7 +80,9 @@ fn main() {
         .collect();
 
     let tera = tera::Tera::new("templates/*.html").unwrap();
-    let relink = create_relinker(&compounds, &html_dir, img_dir);
+    write_navigation(&tera, &html_dir, &compounds);
+
+    let relink = create_relinker(&compounds, img_dir);
 
     compounds.into_iter().par_bridge().for_each(|compound| {
         match compound {
@@ -113,14 +116,10 @@ enum Compound {
     Page(parser::Page),
 }
 
-fn create_relinker(
-    compounds: &[Compound],
-    html_dir: &Path,
-    img_dir: &str,
-) -> Box<dyn Fn(&str) -> String + Sync> {
+fn create_relinker(compounds: &[Compound], img_dir: &str) -> Box<dyn Fn(&str) -> String + Sync> {
     let re_refs = regex::Regex::new("refid://([^\"]*)").unwrap();
     let re_imgs = regex::Regex::new("doxyimg://([^\"]*)").unwrap();
-    let ref_to_path = create_ref_to_path_map(html_dir, compounds);
+    let ref_to_path = create_ref_to_path_map(compounds);
     let img_dir = img_dir.to_owned();
 
     Box::new(move |v| -> String {
@@ -144,17 +143,13 @@ fn create_relinker(
     })
 }
 
-fn create_ref_to_path_map(
-    html_dir: &Path,
-    compounds: &[Compound],
-) -> std::collections::HashMap<String, String> {
+fn create_ref_to_path_map(compounds: &[Compound]) -> std::collections::HashMap<String, String> {
     let mut ref_to_path = std::collections::HashMap::<String, String>::new();
     for compound in compounds {
         match compound {
             Compound::File(file) => {
-                let filename = html_dir.join(format!("{}.html", file.ref_id));
-                let filename = filename.to_str().unwrap();
-                ref_to_path.insert(file.ref_id.clone(), filename.to_owned());
+                let filename = format!("{}.html", file.ref_id);
+                ref_to_path.insert(file.ref_id.clone(), filename.clone());
                 for class in &file.scopes {
                     ref_to_path.insert(
                         class.ref_id.clone(),
@@ -171,8 +166,8 @@ fn create_ref_to_path_map(
                 }
             }
             Compound::Page(page) => {
-                let filename = html_dir.join(format!("{}.html", page.ref_id));
-                ref_to_path.insert(page.ref_id.clone(), filename.to_str().unwrap().to_owned());
+                let filename = format!("{}.html", page.ref_id);
+                ref_to_path.insert(page.ref_id.clone(), filename);
                 // TODO: add paragraph links
             }
         }
@@ -183,6 +178,7 @@ fn create_ref_to_path_map(
 fn write_compound_file(tera: &Tera, file_name: &Path, file: &parser::File) {
     let context = tera::Context::from_serialize(file).unwrap();
     let content = tera.render("file.html", &context).unwrap();
+    //let content = html_minifier::minify(content).unwrap();
     let mut f = std::fs::File::create(file_name).unwrap();
     f.write_all(content.as_bytes()).unwrap();
 }
@@ -190,6 +186,47 @@ fn write_compound_file(tera: &Tera, file_name: &Path, file: &parser::File) {
 fn write_compound_page(tera: &Tera, file_name: &Path, page: &parser::Page) {
     let context = tera::Context::from_serialize(page).unwrap();
     let content = tera.render("page.html", &context).unwrap();
+    //let content = html_minifier::minify(content).unwrap();
     let mut f = std::fs::File::create(file_name).unwrap();
+    f.write_all(content.as_bytes()).unwrap();
+}
+
+#[derive(Serialize)]
+struct Nav<'a> {
+    links: Vec<NavLink<'a>>,
+}
+
+#[derive(Serialize)]
+struct NavLink<'a> {
+    href: String,
+    text: &'a str,
+}
+
+fn write_navigation(tera: &Tera, html_dir: &Path, compounds: &[Compound]) {
+    let links = compounds
+        .iter()
+        .map(|compound| match compound {
+            Compound::File(ref file) => {
+                let href = format!("{}.html", file.ref_id);
+                NavLink {
+                    href,
+                    text: &file.name,
+                }
+            }
+            Compound::Page(page) => {
+                let href = format!("{}.html", page.ref_id);
+                NavLink {
+                    href,
+                    text: &page.title,
+                }
+            }
+        })
+        .collect();
+    let nav = Nav { links };
+
+    let context = tera::Context::from_serialize(nav).unwrap();
+    let content = tera.render("nav.html", &context).unwrap();
+    //let content = html_minifier::minify(content).unwrap();
+    let mut f = std::fs::File::create(html_dir.join("nav.html")).unwrap();
     f.write_all(content.as_bytes()).unwrap();
 }

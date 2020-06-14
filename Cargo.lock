@@ -140,12 +140,24 @@ dependencies = [
 name = "doxyrs"
 version = "0.1.0"
 dependencies = [
+ "html-minifier",
  "rayon",
  "regex",
  "roxmltree",
  "serde",
  "structopt",
  "tera",
+]
+
+[[package]]
+name = "educe"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d27c760a73a13abb1ddf417c06bc2b8d14b0607dd19097316e0ca9412a971088"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -218,6 +230,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "html-minifier"
+version = "1.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa02a824a901d2b896204dc404d9df76febe151e3d78cc838a0a834b9d5095d6"
+dependencies = [
+ "educe",
+ "minifier",
+]
+
+[[package]]
 name = "ignore"
 version = "0.4.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -263,6 +285,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "macro-utils"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e72f7deb758fea9ea7d290aebfa788763d0bffae12caa6406a25baaf8fa68a8"
+
+[[package]]
 name = "maplit"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -287,6 +315,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4fc2c02a7e374099d4ee95a193111f72d2110197fe200272371758f6c3643d8"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "minifier"
+version = "0.0.36"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1152a0a768a747fd88f25b1d47d28b9450e11df8ebdcaadea4cc55d9c0e79673"
+dependencies = [
+ "macro-utils",
 ]
 
 [[package]]

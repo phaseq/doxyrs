@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <base target="_PARENT">
+    <title>NavBar</title>
+    <style>
+        body {
+            font-size: 12px;
+        }
+
+        a {
+            color: black;
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Navigation</h1>
+    {% for link in links %}
+    <a href="{{link.href | safe}}">{{link.text}}</a><br />
+    {% endfor %}
+</body>
+
+</html>

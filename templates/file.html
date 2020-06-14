@@ -7,7 +7,12 @@
 
 <style>
     body {
-        font-family: sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Avenir Next', Avenir, sans-serif;
+        font-size: 14px;
+    }
+
+    a:hover {
+        text-decoration: none;
     }
 
     .scope,
@@ -29,9 +34,10 @@
     }
 
     .member .definition {
+        font-size: 1.1em;
         padding: 0.2em;
         background-color: #eeeeee;
-        font-family: "Source Code Pro", 'Courier New', Courier, monospace;
+        font-family: "Source Code Pro", Consolas, Monaco, monospace;
     }
 
     .member_name {
@@ -57,21 +63,13 @@
         color: #ad448e;
     }
 
-    .definition a {
-        text-decoration: none;
-    }
-
-    .definition a:hover {
-        text-decoration: underline;
-    }
-
     .description a {
         color: #2c8093;
         background: #f5f5f5;
         text-decoration: none;
         padding: 0 0.1em;
         border-radius: 3px;
-        font-family: "Source Code Pro", 'Courier New', Courier, monospace;
+        font-family: "Source Code Pro", Consolas, Monaco, monospace;
     }
 
     .description a:hover {
@@ -89,7 +87,6 @@
 
     .member .description {
         padding: 0 0.2em;
-        font-size: 0.85em;
     }
 
     .parameterlist {
@@ -120,32 +117,48 @@
     .highlight-normal {
         font-weight: normal;
     }
+
+    iframe {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 250px;
+        height: 100%;
+        border: 0;
+    }
+
+    #content {
+        margin-left: 250px;
+    }
 </style>
 
 <body>
-    <h1>{{ name }}</h1>
-    {% for scope in scopes %}
-    <a name="{{scope.ref_id}}"></a>
-    <div class="scope">
-        <h2>{{ scope.name | safe }}</h2>
+    <iframe src="nav.html"></iframe>
+    <div id="content">
+        <h1>{{ name }}</h1>
+        {% for scope in scopes %}
+        <a name="{{scope.ref_id}}"></a>
+        <div class="scope">
+            <h2>{{ scope.name | safe }}</h2>
 
-        {% for section in scope.sections %}
-        {% if section.name %}
-        <h3>{{section.name}}</h3>
-        {% endif %}
-        {% if section.description %}
-        {{ section.description | safe }}
-        {% endif %}
-        {% for member in section.members %}
-        <a name="{{member.ref_id}}"></a>
-        <div class="member">
-            <div class="definition">{{member.definition | safe}}</div>
-            <div class="description">{{member.description | safe}}</div>
+            {% for section in scope.sections %}
+            {% if section.name %}
+            <h3>{{section.name}}</h3>
+            {% endif %}
+            {% if section.description %}
+            {{ section.description | safe }}
+            {% endif %}
+            {% for member in section.members %}
+            <a name="{{member.ref_id}}"></a>
+            <div class="member">
+                <div class="definition">{{member.definition | safe}}</div>
+                <div class="description">{{member.description | safe}}</div>
+            </div>
+            {% endfor %}
+            {% endfor %}
         </div>
         {% endfor %}
-        {% endfor %}
     </div>
-    {% endfor %}
 </body>
 
 </html>
