@@ -347,7 +347,7 @@ fn parse_text(node: Node) -> String {
                         let description =
                             parse_text(item.get_child("parameterdescription").unwrap());
                         s.push_str(&format!(
-                            "<tr><td><span class=\"declname\">{}</span>:</td><td>{}</td></tr>",
+                            "<tr><td><span class=\"declname\">{}</span></td><td>{}</td></tr>",
                             tera::escape_html(name),
                             description
                         ));
