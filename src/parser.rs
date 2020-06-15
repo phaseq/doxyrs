@@ -9,6 +9,7 @@ pub struct Page {
     pub ref_id: String,
     pub title: String,
     pub description: String,
+    pub subpage_refs: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -54,10 +55,17 @@ pub fn parse_compound_page(xml_dir: &Path, ref_id: &str) -> Page {
 
     let description = parse_text(compounddef.get_child("detaileddescription").unwrap());
 
+    let subpage_refs = compounddef
+        .children()
+        .filter(|c| c.has_tag_name("innerpage"))
+        .map(|n| n.attribute("refid").unwrap().to_owned())
+        .collect();
+
     Page {
         ref_id: ref_id.to_owned(),
         title,
         description,
+        subpage_refs,
     }
 }
 
@@ -181,16 +189,16 @@ fn parse_member(memberdef: Node) -> Member {
     let args = render_function_args(memberdef);
 
     let definition = match memberdef.attribute("kind").unwrap() {
-        "function" if !return_type.is_empty() => format!(
+        "function" | "event" if !return_type.is_empty() => format!(
             "{}<span class=\"member_name\">{}</span>{} → <span class=\"rettype\">{}</span>",
             template, name, args, return_type
         ),
-        "function" => format!("{}<span class=\"member_name\">{}</span>{}", template, name, args),
+        "function" | "event" => format!("{}<span class=\"member_name\">{}</span>{}", template, name, args),
         "typedef" => format!(
             "{}<span class=\"keyword\">using</span> <span class=\"member_name\">{}</span> = <span class=\"type\">{}</span>",
             template, name, return_type
         ),
-        "variable" => format!(
+        "variable" | "property" => format!(
             "<span class=\"type\">{}</span> <span class=\"member_name\">{}</span> <span class=\"defval\">{}</span>",
             return_type,
             name,
@@ -208,7 +216,7 @@ fn parse_member(memberdef: Node) -> Member {
             }
             s.push_str("}");
             s
-        }
+        },
         //_ => format!("{}", memberdef.get_child_value("definition").unwrap()),
         _ => panic!(
             "not implemented: {} ({})",
@@ -347,7 +355,7 @@ fn parse_text(node: Node) -> String {
                         let description =
                             parse_text(item.get_child("parameterdescription").unwrap());
                         s.push_str(&format!(
-                            "<tr><td><span class=\"declname\">{}</span></td><td>{}</td></tr>",
+                            "<tr><td><span class=\"declname\">{}:</span></td><td>{}</td></tr>",
                             tera::escape_html(name),
                             description
                         ));
