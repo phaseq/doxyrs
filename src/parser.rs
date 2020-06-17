@@ -247,7 +247,7 @@ fn render_templateparamlist(memberdef: Node) -> String {
             if !s.is_empty() {
                 s.push_str(", ");
             }
-            s.push_str(param.get_child_value("type").unwrap());
+            s.push_str(&parse_text(param.get_child("type").unwrap()));
             if let Some(defval) = param.get_child_value("defval") {
                 s.push_str(&defval);
             }
