@@ -389,9 +389,9 @@ fn parse_text(node: Node) -> String {
                 s.push_str("</table>");
             }
             "programlisting" => {
-                s.push_str("<pre>");
-                for item in c.children().filter(|n| n.has_tag_name("codeline")) {
-                    s.push_str(&format!("{}<br/>", parse_text(item)));
+                s.push_str("<pre class=\"programlisting\">");
+                for codeline in c.children().filter(|n| n.has_tag_name("codeline")) {
+                    s.push_str(&format!("{}<br/>", parse_text(codeline)));
                 }
                 s.push_str("</pre>");
             }
