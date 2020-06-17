@@ -27,7 +27,7 @@ a:hover {
 .kind_part,
 .namespace_part,
 .scope>h2>.templateparamlist {
-    color: #aaaaaa;
+    color: #ced4da;
 }
 
 .name_part {
@@ -67,7 +67,7 @@ a:hover {
 }
 
 .templateparamlist {
-    color: gray;
+    color: #6c757d;
     display: block;
 }
 
@@ -104,7 +104,7 @@ a:hover {
 
 .defval,
 .defval a {
-    color: gray;
+    color: #6c757d;
 }
 
 .parameterlist {
@@ -136,7 +136,7 @@ a:hover {
     font-family: "Source Code Pro", Consolas, Monaco, monospace;
     font-size: 0.8rem;
     display: inline-block;
-    border: 1px solid #cccccc;
+    border: 1px solid #ced4da;
     padding: 0.5rem;
 }
 
@@ -265,7 +265,7 @@ main table tr:first-of-type th {
 
 .programlisting {
     display: inline-block;
-    border: 1px solid #cccccc;
+    border: 1px solid #ced4da;
     padding: 0.5rem;
 }
 

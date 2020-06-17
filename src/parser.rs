@@ -2,7 +2,8 @@ use roxmltree::{Document, Node};
 use serde::Serialize;
 use std::path::Path;
 
-// TODOs: mwVerifierNestedEnums.hpp
+// see here for structure:
+// https://raw.githubusercontent.com/doxygen/doxygen/master/templates/xml/compound.xsd
 
 #[derive(Serialize)]
 pub struct Page {
@@ -340,20 +341,25 @@ fn parse_text(node: Node) -> String {
             }
             "simplesect" => {
                 let kind = c.attribute("kind").unwrap();
-                if let Some(css_class) = match kind {
-                    "warning" => Some("alert-warning"),
-                    "info" => Some("alert-info"),
+                let css_class = match kind {
+                    "warning" | "attention" => Some("alert-warning"),
+                    "info" | "note" | "remark" => Some("alert-info"),
                     _ => None,
-                } {
+                };
+                if let Some(css_class) = css_class {
                     s.push_str(&format!(
                         "<div class=\"alert {}\">{}</div>",
                         css_class,
                         parse_text(c.get_child("para").unwrap())
                     ));
                 } else {
+                    let kind_name = match kind {
+                        "return" => "Returns".to_owned(),
+                        _ => capitalize_first_letter(&kind),
+                    };
                     s.push_str(&format!(
                         "<p>{}: {}</p>",
-                        c.attribute("kind").unwrap(),
+                        kind_name,
                         parse_text(c.get_child("para").unwrap())
                     ));
                 }
@@ -489,6 +495,14 @@ fn parse_text(node: Node) -> String {
         }
     }
     s
+}
+
+fn capitalize_first_letter(s: &str) -> String {
+    let mut c = s.chars();
+    match c.next() {
+        None => String::new(),
+        Some(f) => f.to_uppercase().chain(c).collect(),
+    }
 }
 
 pub trait NodeExt<'n1, 'n2> {

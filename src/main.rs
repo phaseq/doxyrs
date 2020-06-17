@@ -275,8 +275,9 @@ fn write_navigation(tera: &Tera, html_dir: &Path, compounds: &[Compound]) {
 
     let sections = toc
         .into_iter()
-        .map(|(title, children)| {
+        .map(|(title, mut children)| {
             let title = if title.is_empty() { "Unsorted" } else { title };
+            children.sort_by_key(|c| c.text);
             NavSection { title, children }
         })
         .collect();
