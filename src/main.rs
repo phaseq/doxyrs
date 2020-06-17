@@ -234,7 +234,13 @@ fn write_compound_page(tera: &Tera, file_name: &Path, page: &parser::Page) {
 
 #[derive(Serialize)]
 struct Nav<'a> {
-    links: Vec<NavLink<'a>>,
+    sections: Vec<NavSection<'a>>,
+}
+
+#[derive(Serialize)]
+struct NavSection<'a> {
+    title: &'a str,
+    children: Vec<NavLink<'a>>,
 }
 
 #[derive(Serialize)]
@@ -244,26 +250,38 @@ struct NavLink<'a> {
 }
 
 fn write_navigation(tera: &Tera, html_dir: &Path, compounds: &[Compound]) {
-    let links = compounds
-        .iter()
-        .map(|compound| match compound {
+    let mut toc: std::collections::BTreeMap<&str, Vec<NavLink>> = std::collections::BTreeMap::new();
+    for compound in compounds {
+        match compound {
             Compound::File(ref file) => {
+                let dir = file.source.rsplitn(2, '/').nth(1).unwrap_or("");
                 let href = format!("{}.html", file.ref_id);
-                NavLink {
+                toc.entry(dir).or_default().push(NavLink {
                     href,
                     text: &file.name,
-                }
+                });
             }
             Compound::Page(page) => {
+                let dir = page.source.rsplitn(2, '/').nth(1).unwrap_or("");
+
                 let href = format!("{}.html", page.ref_id);
-                NavLink {
+                toc.entry(dir).or_default().push(NavLink {
                     href,
                     text: &page.title,
-                }
+                });
             }
+        }
+    }
+
+    let sections = toc
+        .into_iter()
+        .map(|(title, children)| {
+            let title = if title.is_empty() { "Unsorted" } else { title };
+            NavSection { title, children }
         })
         .collect();
-    let nav = Nav { links };
+
+    let nav = Nav { sections };
 
     let context = tera::Context::from_serialize(nav).unwrap();
     let content = tera.render("nav.html", &context).unwrap();

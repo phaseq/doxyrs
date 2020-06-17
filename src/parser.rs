@@ -7,6 +7,7 @@ use std::path::Path;
 #[derive(Serialize)]
 pub struct Page {
     pub ref_id: String,
+    pub source: String,
     pub title: String,
     pub description: String,
     pub subpage_refs: Vec<String>,
@@ -15,6 +16,7 @@ pub struct Page {
 #[derive(Serialize)]
 pub struct File {
     pub ref_id: String,
+    pub source: String,
     pub name: String,
     pub scopes: Vec<Scope>,
 }
@@ -51,6 +53,12 @@ pub fn parse_compound_page(xml_dir: &Path, ref_id: &str) -> Page {
         .find(|n| n.tag_name().name() == "compounddef")
         .unwrap();
 
+    let source = compounddef
+        .get_child("location")
+        .map(|l| l.attribute("file").unwrap())
+        .unwrap_or_default()
+        .to_owned();
+
     let title = compounddef.get_child_value("title").unwrap().to_owned();
 
     let description = parse_text(compounddef.get_child("detaileddescription").unwrap());
@@ -63,6 +71,7 @@ pub fn parse_compound_page(xml_dir: &Path, ref_id: &str) -> Page {
 
     Page {
         ref_id: ref_id.to_owned(),
+        source,
         title,
         description,
         subpage_refs,
@@ -78,6 +87,12 @@ pub fn parse_compound_file(xml_dir: &Path, ref_id: &str) -> File {
         .children()
         .find(|n| n.tag_name().name() == "compounddef")
         .unwrap();
+
+    let source = compounddef
+        .get_child("location")
+        .map(|l| l.attribute("file").unwrap())
+        .unwrap_or_default()
+        .to_owned();
 
     let name = compounddef
         .get_child_value("compoundname")
@@ -101,6 +116,7 @@ pub fn parse_compound_file(xml_dir: &Path, ref_id: &str) -> File {
     }
     File {
         ref_id: ref_id.to_owned(),
+        source,
         name,
         scopes,
     }
