@@ -331,10 +331,12 @@ fn render_function_args(memberdef: Node) -> String {
 
 fn parse_text(node: Node) -> String {
     let mut s = String::new();
+    let mut skip_next_chars = 0usize;
     for c in node.children() {
         match c.tag_name().name() {
             "" => {
-                s.push_str(&tera::escape_html(c.text().unwrap()));
+                s.push_str(&tera::escape_html(&c.text().unwrap()[skip_next_chars..]));
+                skip_next_chars = 0usize;
             }
             "para" => {
                 s.push_str(&format!("<p>{}</p>", parse_text(c)));
@@ -439,7 +441,20 @@ fn parse_text(node: Node) -> String {
             }
             "image" => {
                 let path = c.attribute("name").unwrap();
-                s.push_str(&format!("<img src=\"doxyimg://{}\" />", path))
+
+                // parse style information like:
+                // <image ...></image>{width: 80%}
+                let mut style = String::new();
+                if let Some(tail) = c.next_sibling().and_then(|s| s.text()) {
+                    let tail = tail.trim_start();
+                    if tail.starts_with('{') {
+                        if let Some(end) = tail.find('}') {
+                            style = format!(" style=\"{}\"", &tail[1..end]);
+                            skip_next_chars = end + 2;
+                        }
+                    }
+                }
+                s.push_str(&format!("<img src=\"doxyimg://{}\"{} />", path, style))
             }
             // tag pass-through
             "bold" => {
