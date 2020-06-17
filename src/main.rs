@@ -1,32 +1,52 @@
+use gumdrop::Options;
 use rayon::prelude::*;
 use roxmltree::Document;
 use serde::Serialize;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use structopt::StructOpt;
 use tera::Tera;
 
 mod parser;
 
-#[derive(StructOpt)]
-#[structopt(name = "doxyrs")]
+#[derive(Debug, Options)]
 struct Cli {
-    /// Directory containing the doxygen XML output
-    #[structopt(long)]
+    #[options(help = "Print help message")]
+    help: bool,
+
+    #[options(
+        no_short,
+        help = "Directory containing the doxygen XML output (required)"
+    )]
     xml: String,
 
-    /// HTML output directory
-    #[structopt(short, long)]
+    #[options(help = "HTML output directory (required)")]
     output: String,
 }
 
 fn main() {
-    let opt = Cli::from_args();
-    let xml_dir = PathBuf::from(opt.xml);
-    let html_dir = PathBuf::from(opt.output);
-    let img_dir = "./"; // TODO
+    let opt = Cli::parse_args_default_or_exit();
+    if opt.xml.is_empty() || opt.output.is_empty() {
+        if opt.xml.is_empty() {
+            println!("missing required argument: --xml");
+        }
+        if opt.output.is_empty() {
+            println!("missing required argument: --output");
+        }
+        println!("\n{}", Cli::usage());
+        std::process::exit(1);
+    }
 
+    let xml_dir = PathBuf::from(opt.xml);
+    if !xml_dir.exists() {
+        println!("--xml path not found: {}", xml_dir.to_string_lossy());
+    }
+
+    let html_dir = PathBuf::from(opt.output);
     std::fs::create_dir_all(&html_dir).unwrap();
+
+    copy_static_files(&html_dir).unwrap();
+
+    let img_dir = "./"; // TODO
 
     // read the index file
     let index_path = xml_dir.join("index.xml");
@@ -173,6 +193,27 @@ fn create_ref_to_path_map(compounds: &[Compound]) -> std::collections::HashMap<S
         }
     }
     ref_to_path
+}
+
+fn copy_static_files(html_dir: &Path) -> std::io::Result<()> {
+    let target_dir = html_dir.join("static");
+    std::fs::create_dir_all(&target_dir)?;
+
+    let current_exe = std::env::current_exe()?;
+    let my_path = current_exe.parent().unwrap();
+    let source_dir = if my_path.join("../../static").exists() {
+        my_path.join("../../static")
+    } else {
+        my_path.join("static")
+    };
+
+    for entry in std::fs::read_dir(source_dir)? {
+        let entry = entry?;
+        let from_path = entry.path();
+        let to_path = target_dir.join(from_path.file_name().unwrap());
+        std::fs::copy(from_path, to_path)?;
+    }
+    Ok(())
 }
 
 fn write_compound_file(tera: &Tera, file_name: &Path, file: &parser::File) {

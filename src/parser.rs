@@ -323,11 +323,24 @@ fn parse_text(node: Node) -> String {
                 s.push_str(&format!("<p>{}</p>", parse_text(c)));
             }
             "simplesect" => {
-                s.push_str(&format!(
-                    "<p>{}: {}</p>",
-                    c.attribute("kind").unwrap(),
-                    parse_text(c.get_child("para").unwrap())
-                ));
+                let kind = c.attribute("kind").unwrap();
+                if let Some(css_class) = match kind {
+                    "warning" => Some("alert-warning"),
+                    "info" => Some("alert-info"),
+                    _ => None,
+                } {
+                    s.push_str(&format!(
+                        "<div class=\"alert {}\">{}</div>",
+                        css_class,
+                        parse_text(c.get_child("para").unwrap())
+                    ));
+                } else {
+                    s.push_str(&format!(
+                        "<p>{}: {}</p>",
+                        c.attribute("kind").unwrap(),
+                        parse_text(c.get_child("para").unwrap())
+                    ));
+                }
             }
             "ref" => {
                 // TODO: add link
