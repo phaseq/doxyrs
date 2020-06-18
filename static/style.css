@@ -223,16 +223,19 @@ main img {
 
 #sidebar a {
     display: block;
-    padding: .2rem 0 .2rem 1rem;
+    padding: .2rem .2rem .2rem .2rem;
+    margin-left: .8rem;
     color: rgba(0,0,0,0.65);
     font-size: .8rem;
     color: black;
     text-decoration: none;
     word-wrap: break-word;
+    border-radius: .25em;
+    border-left: 2px solid white;
 }
 
-#sidebar a:hover, #sidebar summary:hover {
-    background-color: #eee;
+#sidebar a:hover {
+    border-left: 2px solid #abdee5;
 }
 
 #sidebar a:last-child {
@@ -240,7 +243,8 @@ main img {
 }
 
 #sidebar a.current {
-    font-weight: bold;
+    /*background-color: #e9ecef;*/
+    border-left: 2px solid #3cb1c3;
 }
 
 h1 {
