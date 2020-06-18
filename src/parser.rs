@@ -222,6 +222,7 @@ fn parse_member(memberdef: Node) -> Member {
             tera::escape_html(memberdef.get_child_value("initializer").unwrap_or_default())
         ),
         "enum" => {
+            // TODO: embed documentation of enum parameters
             let mut s = String::new();
             s.push_str(&format!("<span class=\"keyword\">enum</span> <span class=\"member_name\">{}</span> {{<br>", name));
             for value in memberdef.children().filter(|c| c.has_tag_name("enumvalue")) {

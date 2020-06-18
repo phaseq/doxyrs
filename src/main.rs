@@ -99,9 +99,9 @@ fn main() {
         })
         .collect();
 
-    let tera = tera::Tera::new("templates/*.html").unwrap();
-    write_navigation(&tera, &html_dir, &compounds);
+    write_navigation(&html_dir, &compounds);
 
+    let tera = tera::Tera::new("templates/*.html").unwrap();
     let relink = create_relinker(&compounds, img_dir);
 
     compounds.into_iter().par_bridge().for_each(|compound| {
@@ -249,7 +249,7 @@ struct NavLink<'a> {
     text: &'a str,
 }
 
-fn write_navigation(tera: &Tera, html_dir: &Path, compounds: &[Compound]) {
+fn write_navigation(html_dir: &Path, compounds: &[Compound]) {
     let mut toc: std::collections::BTreeMap<&str, Vec<NavLink>> = std::collections::BTreeMap::new();
     for compound in compounds {
         match compound {
@@ -273,20 +273,25 @@ fn write_navigation(tera: &Tera, html_dir: &Path, compounds: &[Compound]) {
         }
     }
 
-    let sections = toc
-        .into_iter()
-        .map(|(title, mut children)| {
-            let title = if title.is_empty() { "Unsorted" } else { title };
-            children.sort_by_key(|c| c.text);
-            NavSection { title, children }
-        })
-        .collect();
+    let mut doc = json::JsonValue::new_array();
+    for (title, mut children) in toc.into_iter() {
+        let title = match title {
+            "" => "Unsorted",
+            _ => title,
+        };
 
-    let nav = Nav { sections };
+        children.sort_by_key(|c| c.text);
+        let children: Vec<_> = children
+            .into_iter()
+            .map(|c| json::array![c.text, c.href])
+            .collect();
+        let children = json::JsonValue::from(children);
 
-    let context = tera::Context::from_serialize(nav).unwrap();
-    let content = tera.render("nav.html", &context).unwrap();
-    //let content = html_minifier::minify(content).unwrap();
-    let mut f = std::fs::File::create(html_dir.join("nav.html")).unwrap();
-    f.write_all(content.as_bytes()).unwrap();
+        doc.push(json::array![title, children]).unwrap();
+    }
+
+    let f = std::fs::File::create(html_dir.join("nav.js")).unwrap();
+    let mut f = std::io::BufWriter::new(f);
+    f.write_all(b"let nav=").unwrap();
+    doc.write(&mut f).unwrap();
 }

@@ -10,11 +10,17 @@
     <title>{{ title }}</title>
 </head>
 
-<body><iframe src="nav.html"></iframe>
+<body>
+    <nav id="sidebar">
+        <h1>Navigation</h1>
+    </nav>
     <main>
         <h1>{{ title }}</h1>
         {{ description | safe }}
     </main>
+
+    <script src="nav.js"></script>
+    <script src="static/script.js"></script>
 </body>
 
 </html>
