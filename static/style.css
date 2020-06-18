@@ -273,7 +273,7 @@ main table tr:first-of-type th {
 }
 
 .programlisting {
-    display: inline-block;
+    display: block;
     border: 1px solid #ced4da;
     padding: 0.5rem;
 }
