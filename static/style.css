@@ -235,7 +235,7 @@ main img {
 }
 
 #sidebar a:hover {
-    border-left: 2px solid #abdee5;
+    border-left: 2px solid #a8cbfe;
 }
 
 #sidebar a:last-child {
@@ -244,7 +244,7 @@ main img {
 
 #sidebar a.current {
     /*background-color: #e9ecef;*/
-    border-left: 2px solid #3cb1c3;
+    border-left: 2px solid #0d6efd;
 }
 
 h1 {
