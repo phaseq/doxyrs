@@ -419,7 +419,14 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                 ));
             }
             "xrefsect" => {
-                // ignore for now, seems to only link against deprecated page
+                let xreftitle = c.get_child_value("xreftitle").unwrap();
+                let xrefdescription =
+                    parse_text(c.get_child("xrefdescription").unwrap(), &mut context);
+                let css_class = "alert-danger";
+                s.push_str(&format!(
+                    "<div class=\"alert {}\"><h5>{}</h5>{}</div>",
+                    css_class, xreftitle, xrefdescription
+                ));
             }
             "parameterlist" => {
                 s.push_str("<table class=\"parameterlist\">");
