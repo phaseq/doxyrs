@@ -47,6 +47,7 @@ fn main() {
     let xml_dir = PathBuf::from(opt.xml);
     if !xml_dir.exists() {
         println!("--xml path not found: {}", xml_dir.to_string_lossy());
+        std::process::exit(1);
     }
 
     let html_dir = PathBuf::from(opt.output);

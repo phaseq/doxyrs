@@ -252,20 +252,13 @@ h2 {
 h3 {
     font-size: 1.1em;
 }
-
-/*.alert-warning, .alert-info {
-    color: #212529;
-    padding: 1rem;
-    margin: 1rem;
+dt {
+    font-weight: bold;
+    margin-top: 1em;
 }
-
-.alert-warning {
-    background-color: #ffe9a6;
+dd {
+    margin-top: .5em;
 }
-
-.alert-info {
-    background-color: #afecda
-}*/
 
 .alert {
     padding: 1.25rem;

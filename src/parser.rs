@@ -509,6 +509,35 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                 let formula = formula.trim_matches('$');
                 s.push_str(&format!("\\({}\\)", formula));
             }
+            "htmlonly" => {
+                let node_range = c.range();
+                let input_text = c.document().input_text();
+                s.push_str(&input_text[node_range.start + 10..node_range.end - 11]);
+            }
+            "variablelist" => {
+                s.push_str("<dl class=\"variablelist\">");
+                for term in c.children() {
+                    match term.tag_name().name() {
+                        "varlistentry" => {
+                            s.push_str(&format!(
+                                "<dt>{}</dt>",
+                                parse_text(term.get_child("term").unwrap(), &mut context)
+                            ));
+                        }
+                        "listitem" => {
+                            s.push_str(&format!(
+                                "<dd>{}</dd>",
+                                parse_text(term.get_child("para").unwrap(), &mut context)
+                            ));
+                        }
+                        "" => {}
+                        tag @ _ => {
+                            panic!("unexpected tag: {}", tag);
+                        }
+                    }
+                }
+                s.push_str("</dl>");
+            }
             // tag pass-through
             "bold" => {
                 s.push_str(&format!("<bold>{}</bold>", parse_text(c, &mut context)));
