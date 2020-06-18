@@ -7,7 +7,7 @@
 
     <link rel="stylesheet" href="static/style.css">
 
-    <title>{{ name }}</title>
+    <title>{{ common.title }}</title>
 </head>
 
 <body>
@@ -15,7 +15,7 @@
         <h1>Navigation</h1>
     </nav>
     <main>
-        <h1>{{ name }}</h1>
+        <h1>{{ common.title }}</h1>
         {% for scope in scopes %}
         <a name="{{scope.ref_id}}"></a>
         <div class="scope">

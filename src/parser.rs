@@ -7,18 +7,21 @@ use std::path::Path;
 
 #[derive(Serialize)]
 pub struct Page {
-    pub ref_id: String,
-    pub source: String,
-    pub title: String,
+    pub common: PageCommon,
     pub description: String,
     pub subpage_refs: Vec<String>,
 }
 
 #[derive(Serialize)]
-pub struct File {
+pub struct PageCommon {
     pub ref_id: String,
     pub source: String,
-    pub name: String,
+    pub title: String,
+}
+
+#[derive(Serialize)]
+pub struct File {
+    pub common: PageCommon,
     pub scopes: Vec<Scope>,
 }
 
@@ -71,9 +74,11 @@ pub fn parse_compound_page(xml_dir: &Path, ref_id: &str) -> Page {
         .collect();
 
     Page {
-        ref_id: ref_id.to_owned(),
-        source,
-        title,
+        common: PageCommon {
+            ref_id: ref_id.to_owned(),
+            source,
+            title,
+        },
         description,
         subpage_refs,
     }
@@ -95,7 +100,7 @@ pub fn parse_compound_file(xml_dir: &Path, ref_id: &str) -> File {
         .unwrap_or_default()
         .to_owned();
 
-    let name = compounddef
+    let title = compounddef
         .get_child_value("compoundname")
         .unwrap()
         .to_owned();
@@ -106,7 +111,7 @@ pub fn parse_compound_file(xml_dir: &Path, ref_id: &str) -> File {
         match node.tag_name().name() {
             "innerclass" | "innernamespace" => {
                 let inner_ref_id = node.attribute("refid").unwrap();
-                if let Some(scope) = parse_compound_scope(&name, xml_dir, inner_ref_id) {
+                if let Some(scope) = parse_compound_scope(&title, xml_dir, inner_ref_id) {
                     if !scope.sections.is_empty() {
                         scopes.push(scope);
                     }
@@ -116,9 +121,11 @@ pub fn parse_compound_file(xml_dir: &Path, ref_id: &str) -> File {
         }
     }
     File {
-        ref_id: ref_id.to_owned(),
-        source,
-        name,
+        common: PageCommon {
+            ref_id: ref_id.to_owned(),
+            source,
+            title,
+        },
         scopes,
     }
 }

@@ -117,14 +117,14 @@ fn main() {
                     }
                 }
 
-                let file_name = html_dir.join(format!("{}.html", file.ref_id));
+                let file_name = html_dir.join(format!("{}.html", file.common.ref_id));
                 write_compound_file(&tera, &file_name, &file);
             }
             Compound::Page(mut page) => {
                 // update deferred links
                 page.description = relink(&page.description);
 
-                let file_name = html_dir.join(format!("{}.html", page.ref_id));
+                let file_name = html_dir.join(format!("{}.html", page.common.ref_id));
                 write_compound_page(&tera, &file_name, &page);
             }
         }
@@ -168,8 +168,8 @@ fn create_ref_to_path_map(compounds: &[Compound]) -> std::collections::HashMap<S
     for compound in compounds {
         match compound {
             Compound::File(file) => {
-                let filename = format!("{}.html", file.ref_id);
-                ref_to_path.insert(file.ref_id.clone(), filename.clone());
+                let filename = format!("{}.html", file.common.ref_id);
+                ref_to_path.insert(file.common.ref_id.clone(), filename.clone());
                 for class in &file.scopes {
                     ref_to_path.insert(
                         class.ref_id.clone(),
@@ -186,8 +186,8 @@ fn create_ref_to_path_map(compounds: &[Compound]) -> std::collections::HashMap<S
                 }
             }
             Compound::Page(page) => {
-                let filename = format!("{}.html", page.ref_id);
-                ref_to_path.insert(page.ref_id.clone(), filename);
+                let filename = format!("{}.html", page.common.ref_id);
+                ref_to_path.insert(page.common.ref_id.clone(), filename);
                 // TODO: add paragraph links
             }
         }
@@ -250,44 +250,33 @@ struct NavLink<'a> {
 }
 
 fn write_navigation(html_dir: &Path, compounds: &[Compound]) {
-    let mut toc: std::collections::BTreeMap<&str, Vec<NavLink>> = std::collections::BTreeMap::new();
+    let mut doc = json::object! {"sections": json::object!{}, "pages": json::array![]};
+
     for compound in compounds {
-        match compound {
-            Compound::File(ref file) => {
-                let dir = file.source.rsplitn(2, '/').nth(1).unwrap_or("");
-                let href = format!("{}.html", file.ref_id);
-                toc.entry(dir).or_default().push(NavLink {
-                    href,
-                    text: &file.name,
-                });
-            }
-            Compound::Page(page) => {
-                let dir = page.source.rsplitn(2, '/').nth(1).unwrap_or("");
-
-                let href = format!("{}.html", page.ref_id);
-                toc.entry(dir).or_default().push(NavLink {
-                    href,
-                    text: &page.title,
-                });
-            }
-        }
-    }
-
-    let mut doc = json::JsonValue::new_array();
-    for (title, mut children) in toc.into_iter() {
-        let title = match title {
-            "" => "Unsorted",
-            _ => title,
+        let common = match compound {
+            Compound::File(file) => &file.common,
+            Compound::Page(page) => &page.common,
         };
-
-        children.sort_by_key(|c| c.text);
-        let children: Vec<_> = children
-            .into_iter()
-            .map(|c| json::array![c.text, c.href])
-            .collect();
-        let children = json::JsonValue::from(children);
-
-        doc.push(json::array![title, children]).unwrap();
+        let snippets: Vec<_> = common.source.split('/').collect();
+        let mut section = &mut doc;
+        for snippet in &snippets[0..snippets.len() - 1] {
+            if section["sections"][*snippet].is_null() {
+                section["sections"]
+                    .insert(
+                        snippet,
+                        json::object! {
+                            "sections": json::object!{},
+                            "pages": json::array![]
+                        },
+                    )
+                    .unwrap();
+            }
+            section = &mut section["sections"][*snippet];
+        }
+        let href = format!("{}.html", common.ref_id);
+        section["pages"]
+            .push(json::array![common.title.as_str(), href])
+            .unwrap();
     }
 
     let f = std::fs::File::create(html_dir.join("nav.js")).unwrap();
