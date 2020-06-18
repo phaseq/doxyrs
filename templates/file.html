@@ -7,13 +7,18 @@
 
     <link rel="stylesheet" href="static/style.css">
 
+    {% if common.has_math %}
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    {% endif %}
+
     <title>{{ common.title }}</title>
 </head>
 
 <body>
-    <nav id="sidebar">
-        <h1>Navigation</h1>
-    </nav>
+    <div id="sidebar">
+        <h1>ModuleWorks Docs</h1>
+    </div>
     <main>
         <h1>{{ common.title }}</h1>
         {% for scope in scopes %}

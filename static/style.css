@@ -195,23 +195,29 @@ main table tr:first-of-type th {
     border-bottom: 1px solid #000000;
 }
 
+main img {
+    max-width: 100%;
+}
+
 #sidebar {
     position: fixed;
+    top: 0;
+    left: 0;
     height: 100%;
-    width: 20em;
+    width: 20rem;
     border: 0;
     overflow-y: auto;
 }
 
-#sidebar details {
-    padding-left: 1em;
+#sidebar details, #sidebar h1 {
+    padding: 0 1rem;
 }
 
 #sidebar summary {
     margin: .5rem 1em 0 0;
     color: rgba(0,0,0,0.85);
     font-weight: 600;
-    font-size: .670rem;
+    /*font-size: .670rem;*/
     word-wrap: break-word;
 }
 
@@ -219,7 +225,7 @@ main table tr:first-of-type th {
     display: block;
     padding: .5rem 0 .5rem 1rem;
     color: rgba(0,0,0,0.65);
-    font-size: .766rem;
+    /*font-size: .766rem;*/
     color: black;
     text-decoration: none;
     word-wrap: break-word;
@@ -235,6 +241,16 @@ main table tr:first-of-type th {
 
 #sidebar a.current {
     font-weight: bold;
+}
+
+h1 {
+    font-size: 1.5em;
+}
+h2 {
+    font-size: 1.3em;
+}
+h3 {
+    font-size: 1.1em;
 }
 
 /*.alert-warning, .alert-info {

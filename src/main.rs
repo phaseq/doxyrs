@@ -13,6 +13,9 @@ struct Cli {
     #[options(help = "Print help message")]
     help: bool,
 
+    #[options(no_short, help = "Root directory for the doxygen XML (required)")]
+    source: String,
+
     #[options(
         no_short,
         help = "Directory containing the doxygen XML output (required)"
@@ -25,7 +28,10 @@ struct Cli {
 
 fn main() {
     let opt = Cli::parse_args_default_or_exit();
-    if opt.xml.is_empty() || opt.output.is_empty() {
+    if opt.source.is_empty() || opt.xml.is_empty() || opt.output.is_empty() {
+        if opt.source.is_empty() {
+            println!("missing required argument: --source");
+        }
         if opt.xml.is_empty() {
             println!("missing required argument: --xml");
         }
@@ -36,17 +42,17 @@ fn main() {
         std::process::exit(1);
     }
 
+    let source_dir = PathBuf::from(opt.source);
+
     let xml_dir = PathBuf::from(opt.xml);
     if !xml_dir.exists() {
         println!("--xml path not found: {}", xml_dir.to_string_lossy());
     }
 
     let html_dir = PathBuf::from(opt.output);
-    std::fs::create_dir_all(&html_dir).unwrap();
+    std::fs::create_dir_all(&html_dir.join("images")).unwrap();
 
     copy_static_files(&html_dir).unwrap();
-
-    let img_dir = "./"; // TODO
 
     // read the index file
     let index_path = xml_dir.join("index.xml");
@@ -102,17 +108,19 @@ fn main() {
     write_navigation(&html_dir, &compounds);
 
     let tera = tera::Tera::new("templates/*.html").unwrap();
-    let relink = create_relinker(&compounds, img_dir);
+    let relink = create_relinker(&source_dir, &html_dir, &compounds);
 
     compounds.into_iter().par_bridge().for_each(|compound| {
         match compound {
             Compound::File(mut file) => {
+                let file_dir = file.common.source.rsplitn(2, '/').nth(1).unwrap();
+
                 // update deferred links
                 for scope in &mut file.scopes {
                     for section in &mut scope.sections {
                         for member in &mut section.members {
-                            member.definition = relink(&member.definition);
-                            member.description = relink(&member.description);
+                            member.definition = relink(&member.definition, file_dir);
+                            member.description = relink(&member.description, file_dir);
                         }
                     }
                 }
@@ -121,8 +129,10 @@ fn main() {
                 write_compound_file(&tera, &file_name, &file);
             }
             Compound::Page(mut page) => {
+                let file_dir = page.common.source.rsplitn(2, '/').nth(1).unwrap_or(".");
+
                 // update deferred links
-                page.description = relink(&page.description);
+                page.description = relink(&page.description, file_dir);
 
                 let file_name = html_dir.join(format!("{}.html", page.common.ref_id));
                 write_compound_page(&tera, &file_name, &page);
@@ -136,13 +146,18 @@ enum Compound {
     Page(parser::Page),
 }
 
-fn create_relinker(compounds: &[Compound], img_dir: &str) -> Box<dyn Fn(&str) -> String + Sync> {
+fn create_relinker(
+    source_dir: &Path,
+    html_dir: &Path,
+    compounds: &[Compound],
+) -> Box<dyn Fn(&str, &str) -> String + Sync> {
     let re_refs = regex::Regex::new("refid://([^\"]*)").unwrap();
     let re_imgs = regex::Regex::new("doxyimg://([^\"]*)").unwrap();
     let ref_to_path = create_ref_to_path_map(compounds);
-    let img_dir = img_dir.to_owned();
+    let source_dir = source_dir.to_str().unwrap().to_owned();
+    let html_dir = html_dir.to_str().unwrap().to_owned();
 
-    Box::new(move |v| -> String {
+    Box::new(move |v, img_dir| -> String {
         let v = re_refs.replace_all(v, |caps: &regex::Captures| {
             let cap = &caps[1];
             ref_to_path.get(cap).map(|s| s.as_str()).unwrap_or_else(|| {
@@ -151,11 +166,21 @@ fn create_relinker(compounds: &[Compound], img_dir: &str) -> Box<dyn Fn(&str) ->
             })
         });
         let v = re_imgs.replace_all(&v, |caps: &regex::Captures| {
-            let path = format!("{}{}", &img_dir, &caps[1]);
-            if std::path::PathBuf::from(&path).exists() {
-                format!("file://{}", path)
+            let rel_path = percent_encoding::percent_decode_str(&caps[1])
+                .decode_utf8()
+                .unwrap();
+            let source = format!("{}/{}/{}", &source_dir, &img_dir, rel_path);
+            if std::path::PathBuf::from(&source).exists() {
+                let filename = source.rsplit('/').next().unwrap();
+                // TODO: ensure uniqueness!
+                let target = format!("{}/images/{}", html_dir, filename);
+                // TODO: check timestamps or similar!
+                if !std::path::PathBuf::from(&source).exists() {
+                    std::fs::copy(&source, target).unwrap();
+                }
+                format!("images/{}", filename)
             } else {
-                // println!("WARNING: img not found: {}", &caps[1]);
+                println!("WARNING: img not found: {}", source);
                 caps[1].to_owned()
             }
         });
