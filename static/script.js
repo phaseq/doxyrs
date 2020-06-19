@@ -13,7 +13,7 @@ var my_link = undefined;
 // {% endfor %}
 function addSections(container, content) {
     var containsLink = false;
-    for (let [section_title, section] of Object.entries(content.sections)) {
+    for (let [section_title, section] of content.sections) {
         var details = document.createElement("details");
 
         var summary = document.createElement("summary");

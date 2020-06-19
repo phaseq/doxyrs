@@ -67,7 +67,7 @@ fn main() {
         .find(|n| n.has_tag_name("doxygenindex"))
         .unwrap();
 
-    let compounds: Vec<Compound> = index
+    let compound_nodes: Vec<_> = index
         .children()
         .filter(|n| {
             n.has_tag_name("compound")
@@ -75,7 +75,10 @@ fn main() {
                     .map(|kind| kind == "file" || kind == "page")
                     .unwrap()
         })
-        .par_bridge()
+        .collect();
+    // TODO: we could use par_bridge if we don't care about the order of nodes. Right now we do.
+    let compounds: Vec<Compound> = compound_nodes
+        .par_iter()
         .filter_map(|compound| {
             /*let name = compound
                 .children()
@@ -276,7 +279,7 @@ struct NavLink<'a> {
 }
 
 fn write_navigation(html_dir: &Path, compounds: &[Compound]) {
-    let mut doc = json::object! {"sections": json::object!{}, "pages": json::array![]};
+    let mut doc = json::object! {"sections": json::array![], "pages": json::array![]};
 
     for compound in compounds {
         let common = match compound {
@@ -286,18 +289,25 @@ fn write_navigation(html_dir: &Path, compounds: &[Compound]) {
         let snippets: Vec<_> = common.source.split('/').collect();
         let mut section = &mut doc;
         for snippet in &snippets[0..snippets.len() - 1] {
-            if section["sections"][*snippet].is_null() {
+            if section["sections"]
+                .members()
+                .find(|s| s[0] == *snippet)
+                .is_none()
+            {
                 section["sections"]
-                    .insert(
-                        snippet,
+                    .push(json::array![
+                        *snippet,
                         json::object! {
-                            "sections": json::object!{},
+                            "sections": json::array![],
                             "pages": json::array![]
-                        },
-                    )
+                        }
+                    ])
                     .unwrap();
             }
-            section = &mut section["sections"][*snippet];
+            section = &mut (&mut section["sections"])
+                .members_mut()
+                .find(|s| s[0] == *snippet)
+                .unwrap()[1];
         }
         let href = format!("{}.html", common.ref_id);
         section["pages"]
