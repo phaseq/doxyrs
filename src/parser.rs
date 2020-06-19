@@ -481,6 +481,7 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                 s.push_str("</table>");
             }
             "programlisting" => {
+                // TODO: implement dedentation
                 s.push_str("<pre class=\"programlisting\">");
                 for codeline in c.children().filter(|n| n.has_tag_name("codeline")) {
                     s.push_str(&format!("{}<br/>", parse_text(codeline, &mut context)));

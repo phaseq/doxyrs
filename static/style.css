@@ -191,7 +191,7 @@ main table td, main table th {
     border-bottom: 1px solid #dee2e6;
 }
 
-main table th {
+main table td:not(:last-child), main table th:not(:last-child) {
     padding-right: 1em;
 }
 
@@ -211,14 +211,15 @@ main img {
     width: 20rem;
     border: 0;
     overflow-y: auto;
+    padding-right: 1rem;
 }
 
 #sidebar details, #sidebar h1 {
-    padding: 0 1rem;
+    padding: 0 0 0 1rem;
 }
 
 #sidebar summary {
-    margin: .5rem 1em 0 0;
+    margin: .5rem 0 0 0;
     color: rgba(0,0,0,0.85);
     font-weight: 600;
     /*font-size: .670rem;*/
@@ -227,7 +228,7 @@ main img {
 
 #sidebar a {
     display: block;
-    padding: .2rem .2rem .2rem .2rem;
+    padding: .2rem 0 .2rem .2rem;
     margin-left: .8rem;
     color: rgba(0,0,0,0.65);
     font-size: .8rem;
