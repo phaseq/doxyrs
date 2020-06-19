@@ -211,15 +211,22 @@ main img {
     width: 20rem;
     border: 0;
     overflow-y: auto;
-    padding-right: 1rem;
+    padding-right: .5rem;
 }
 
-#sidebar details, #sidebar h1 {
-    padding: 0 0 0 1rem;
+#sidebar h1 {
+    padding: 0 0 0 .5rem;
+}
+
+#sidebar details {
+    padding: 0 .5rem;
+    border-radius: .25rem;
+    border: 1px solid #dee2e6;
+    margin: 1rem 0;
 }
 
 #sidebar summary {
-    margin: .5rem 0 0 0;
+    margin: .5rem;
     color: rgba(0,0,0,0.85);
     font-weight: 600;
     /*font-size: .670rem;*/
@@ -229,7 +236,7 @@ main img {
 #sidebar a {
     display: block;
     padding: .2rem 0 .2rem .2rem;
-    margin-left: .8rem;
+    margin-left: .3rem;
     color: rgba(0,0,0,0.65);
     font-size: .8rem;
     color: black;

@@ -13,22 +13,6 @@ var my_link = undefined;
 // {% endfor %}
 function addSections(container, content) {
     var containsLink = false;
-    for (let [section_title, section] of content.sections) {
-        var details = document.createElement("details");
-
-        var summary = document.createElement("summary");
-        summary.textContent = section_title;
-        details.appendChild(summary);
-
-        if (section.hasOwnProperty("sections")) {
-            let childContainsLink = addSections(details, section);
-            if (childContainsLink) {
-                details.setAttribute('open', '');
-                containsLink = true;
-            }
-        }
-        container.appendChild(details);
-    }
     for (const page of content.pages) {
         var link = document.createElement("a");
         link.textContent = page[0];
@@ -41,6 +25,22 @@ function addSections(container, content) {
         }
 
         container.appendChild(link);
+    }
+    for (let [section_title, section] of content.sections) {
+        var details = document.createElement("details");
+
+        var summary = document.createElement("summary");
+        summary.textContent = section_title.replace(/_/g, ' '); // TODO: remove replace
+        details.appendChild(summary);
+
+        if (section.hasOwnProperty("sections")) {
+            let childContainsLink = addSections(details, section);
+            if (childContainsLink) {
+                details.setAttribute('open', '');
+                containsLink = true;
+            }
+        }
+        container.appendChild(details);
     }
     return containsLink;
 }
