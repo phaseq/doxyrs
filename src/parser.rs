@@ -463,9 +463,18 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                 for row in c.children().filter(|n| n.has_tag_name("row")) {
                     s.push_str("<tr>");
                     for entry in row.children().filter(|n| n.has_tag_name("entry")) {
-                        s.push_str("<td>");
+                        let is_th = entry.attribute("thead").unwrap() == "yes";
+                        if is_th {
+                            s.push_str("<th>");
+                        } else {
+                            s.push_str("<td>");
+                        }
                         s.push_str(&parse_text(entry, &mut context));
-                        s.push_str("</td>");
+                        if is_th {
+                            s.push_str("</th>");
+                        } else {
+                            s.push_str("</td>");
+                        }
                     }
                     s.push_str("</tr>");
                 }

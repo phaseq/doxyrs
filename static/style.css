@@ -191,6 +191,10 @@ main table td, main table th {
     border-bottom: 1px solid #dee2e6;
 }
 
+main table th {
+    padding-right: 1em;
+}
+
 main table tr:first-of-type th {
     border-bottom: 1px solid #000000;
 }
