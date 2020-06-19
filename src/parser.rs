@@ -6,18 +6,18 @@ use std::path::Path;
 // https://raw.githubusercontent.com/doxygen/doxygen/master/templates/xml/compound.xsd
 
 #[derive(Serialize)]
-pub struct Page {
-    pub common: PageCommon,
-    pub description: String,
-    pub subpage_refs: Vec<String>,
-}
-
-#[derive(Serialize)]
 pub struct PageCommon {
     pub ref_id: String,
     pub source: String,
     pub title: String,
     pub has_math: bool,
+}
+
+#[derive(Serialize)]
+pub struct Page {
+    pub common: PageCommon,
+    pub description: String,
+    pub subpage_refs: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -537,6 +537,10 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                     }
                 }
                 s.push_str("</dl>");
+            }
+            "anchor" => {
+                let id = c.attribute("id").unwrap();
+                s.push_str(&format!("<a name=\"{}\"></a>", id));
             }
             // tag pass-through
             "bold" => {
