@@ -493,9 +493,6 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                     {
                         for token in highlight.children() {
                             match token.tag_name().name() {
-                                "" => {
-                                    continue;
-                                }
                                 "sp" => {
                                     n_indents += 1;
                                 }
