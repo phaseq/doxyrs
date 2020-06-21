@@ -191,6 +191,10 @@ main table td, main table th {
     border-bottom: 1px solid #dee2e6;
 }
 
+main table td:not(:last-child), main table th:not(:last-child) {
+    padding-right: 1em;
+}
+
 main table tr:first-of-type th {
     border-bottom: 1px solid #000000;
 }
@@ -207,14 +211,22 @@ main img {
     width: 20rem;
     border: 0;
     overflow-y: auto;
+    padding-right: .5rem;
 }
 
-#sidebar details, #sidebar h1 {
-    padding: 0 1rem;
+#sidebar h1 {
+    padding: 0 0 0 .5rem;
+}
+
+#sidebar details {
+    padding: 0 .5rem;
+    border-radius: .25rem;
+    border: 1px solid #dee2e6;
+    margin: 1rem 0;
 }
 
 #sidebar summary {
-    margin: .5rem 1em 0 0;
+    margin: .5rem;
     color: rgba(0,0,0,0.85);
     font-weight: 600;
     /*font-size: .670rem;*/
@@ -237,8 +249,10 @@ main img {
 
 #sidebar details>a, #sidebar>a {
     display: block;
-    padding: .2rem .2rem .2rem .2rem;
-    margin-left: .8rem;
+    /*padding: .2rem .2rem .2rem .2rem;
+    margin-left: .8rem;*/
+    padding: .2rem 0 .2rem .2rem;
+    margin-left: .3rem;
     font-size: .8rem;
     text-decoration: none;
 }

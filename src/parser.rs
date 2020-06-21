@@ -6,18 +6,18 @@ use std::path::Path;
 // https://raw.githubusercontent.com/doxygen/doxygen/master/templates/xml/compound.xsd
 
 #[derive(Serialize)]
-pub struct Page {
-    pub common: PageCommon,
-    pub description: String,
-}
-
-#[derive(Serialize)]
 pub struct PageCommon {
     pub ref_id: String,
     pub source: String,
     pub title: String,
     pub has_math: bool,
     pub subpage_refs: Vec<String>,
+}
+
+#[derive(Serialize)]
+pub struct Page {
+    pub common: PageCommon,
+    pub description: String,
 }
 
 #[derive(Serialize)]
@@ -464,15 +464,25 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                 for row in c.children().filter(|n| n.has_tag_name("row")) {
                     s.push_str("<tr>");
                     for entry in row.children().filter(|n| n.has_tag_name("entry")) {
-                        s.push_str("<td>");
+                        let is_th = entry.attribute("thead").unwrap() == "yes";
+                        if is_th {
+                            s.push_str("<th>");
+                        } else {
+                            s.push_str("<td>");
+                        }
                         s.push_str(&parse_text(entry, &mut context));
-                        s.push_str("</td>");
+                        if is_th {
+                            s.push_str("</th>");
+                        } else {
+                            s.push_str("</td>");
+                        }
                     }
                     s.push_str("</tr>");
                 }
                 s.push_str("</table>");
             }
             "programlisting" => {
+                // TODO: implement dedentation
                 s.push_str("<pre class=\"programlisting\">");
                 for codeline in c.children().filter(|n| n.has_tag_name("codeline")) {
                     s.push_str(&format!("{}<br/>", parse_text(codeline, &mut context)));
@@ -538,6 +548,10 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                     }
                 }
                 s.push_str("</dl>");
+            }
+            "anchor" => {
+                let id = c.attribute("id").unwrap();
+                s.push_str(&format!("<a name=\"{}\"></a>", id));
             }
             // tag pass-through
             "bold" => {

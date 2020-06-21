@@ -67,7 +67,7 @@ fn main() {
         .find(|n| n.has_tag_name("doxygenindex"))
         .unwrap();
 
-    let compounds: Vec<Compound> = index
+    let compound_nodes: Vec<_> = index
         .children()
         .filter(|n| {
             n.has_tag_name("compound")
@@ -75,7 +75,10 @@ fn main() {
                     .map(|kind| kind == "file" || kind == "page")
                     .unwrap()
         })
-        .par_bridge()
+        .collect();
+    // TODO: we could use par_bridge if we don't care about the order of nodes. Right now we do.
+    let compounds: Vec<Compound> = compound_nodes
+        .par_iter()
         .filter_map(|compound| {
             /*let name = compound
                 .children()
