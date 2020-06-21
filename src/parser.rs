@@ -482,10 +482,38 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                 s.push_str("</table>");
             }
             "programlisting" => {
-                // TODO: implement dedentation
                 s.push_str("<pre class=\"programlisting\">");
+                let mut dedent = usize::max_value();
                 for codeline in c.children().filter(|n| n.has_tag_name("codeline")) {
-                    s.push_str(&format!("{}<br/>", parse_text(codeline, &mut context)));
+                    // count leading spaces
+                    let mut n_indents = 0;
+                    let mut has_content = false;
+                    if let Some(highlight) =
+                        codeline.children().find(|n| n.has_tag_name("highlight"))
+                    {
+                        for token in highlight.children() {
+                            match token.tag_name().name() {
+                                "" => {
+                                    continue;
+                                }
+                                "sp" => {
+                                    n_indents += 1;
+                                }
+                                _ => {
+                                    has_content = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if has_content {
+                        dedent = std::cmp::min(dedent, n_indents);
+                    }
+                }
+                for codeline in c.children().filter(|n| n.has_tag_name("codeline")) {
+                    let codeline = format!("{}<br/>", parse_text(codeline, &mut context));
+                    let codeline = codeline.replacen("&nbsp;", "", dedent);
+                    s.push_str(&codeline);
                 }
                 s.push_str("</pre>");
             }
