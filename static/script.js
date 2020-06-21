@@ -17,7 +17,20 @@ function addSections(container, content) {
         var details = document.createElement("details");
 
         var summary = document.createElement("summary");
-        summary.textContent = section_title;
+
+        if (section.hasOwnProperty("root")) {
+            var link = document.createElement("a");
+            link.textContent = section_title;
+            link.href = section.root[1];
+            if (link.href == document.location.href) {
+                link.classList.add('current');
+                my_link = link;
+                containsLink = true;
+            }
+            summary.appendChild(link);
+        } else {
+            summary.innerText = section_title;
+        }
         details.appendChild(summary);
 
         if (section.hasOwnProperty("sections")) {

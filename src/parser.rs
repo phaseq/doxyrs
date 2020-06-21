@@ -9,7 +9,6 @@ use std::path::Path;
 pub struct Page {
     pub common: PageCommon,
     pub description: String,
-    pub subpage_refs: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -18,6 +17,7 @@ pub struct PageCommon {
     pub source: String,
     pub title: String,
     pub has_math: bool,
+    pub subpage_refs: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -77,7 +77,7 @@ pub fn parse_compound_page(xml_dir: &Path, ref_id: &str) -> Page {
         &mut context,
     );
 
-    let subpage_refs = compounddef
+    let subpage_refs: Vec<_> = compounddef
         .children()
         .filter(|c| c.has_tag_name("innerpage"))
         .map(|n| n.attribute("refid").unwrap().to_owned())
@@ -89,9 +89,9 @@ pub fn parse_compound_page(xml_dir: &Path, ref_id: &str) -> Page {
             source,
             title,
             has_math: context.has_math,
+            subpage_refs,
         },
         description,
-        subpage_refs,
     }
 }
 
@@ -141,6 +141,7 @@ pub fn parse_compound_file(xml_dir: &Path, ref_id: &str) -> File {
             source,
             title,
             has_math: context.has_math,
+            subpage_refs: vec![],
         },
         scopes,
     }

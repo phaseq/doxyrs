@@ -275,34 +275,90 @@ struct NavLink<'a> {
     text: &'a str,
 }
 
-fn write_navigation(html_dir: &Path, compounds: &[Compound]) {
-    let mut doc = json::object! {"sections": json::object!{}, "pages": json::array![]};
+fn recursive_add_nav(
+    common: &parser::PageCommon,
+    section: &mut json::JsonValue,
+    ref_to_compound: &std::collections::HashMap<&str, &Compound>,
+) {
+    let href = format!("{}.html", common.ref_id);
+    let this_page = json::array![common.title.as_str(), href];
 
+    if common.subpage_refs.is_empty() {
+        section["pages"].push(this_page).unwrap();
+    } else {
+        section["sections"]
+            .insert(
+                &common.title,
+                json::object! {
+                    "root": this_page,
+                    "sections": json::object!{},
+                    "pages": json::array![]
+                },
+            )
+            .unwrap();
+        for subpage in &common.subpage_refs {
+            let subpage = ref_to_compound[subpage.as_str()];
+            if let Compound::Page(subpage) = subpage {
+                recursive_add_nav(
+                    &subpage.common,
+                    &mut section["sections"][&common.title],
+                    &ref_to_compound,
+                );
+            }
+        }
+    }
+}
+
+fn write_navigation(html_dir: &Path, compounds: &[Compound]) {
+    let mut ref_to_parent = std::collections::HashMap::<&str, &str>::new();
+    let mut ref_to_compound = std::collections::HashMap::<&str, &Compound>::new();
     for compound in compounds {
         let common = match compound {
             Compound::File(file) => &file.common,
             Compound::Page(page) => &page.common,
         };
-        let snippets: Vec<_> = common.source.split('/').collect();
-        let mut section = &mut doc;
-        for snippet in &snippets[0..snippets.len() - 1] {
-            if section["sections"][*snippet].is_null() {
-                section["sections"]
-                    .insert(
-                        snippet,
-                        json::object! {
-                            "sections": json::object!{},
-                            "pages": json::array![]
-                        },
-                    )
-                    .unwrap();
-            }
-            section = &mut section["sections"][*snippet];
+        ref_to_compound.insert(&common.ref_id, &compound);
+        for child in common.subpage_refs.iter() {
+            ref_to_parent.insert(&child, &common.ref_id);
         }
-        let href = format!("{}.html", common.ref_id);
-        section["pages"]
-            .push(json::array![common.title.as_str(), href])
-            .unwrap();
+    }
+
+    let mut doc = json::object! {"sections": json::object!{}, "pages": json::array![]};
+
+    for compound in compounds {
+        if let Compound::Page(page) = compound {
+            let common = &page.common;
+            if ref_to_parent.get(common.ref_id.as_str()).is_some() {
+                continue; // skip non-root pages
+            }
+            recursive_add_nav(common, &mut doc, &ref_to_compound);
+        } else {
+            let common = match compound {
+                Compound::File(file) => &file.common,
+                Compound::Page(page) => &page.common,
+            };
+            let href = format!("{}.html", common.ref_id);
+
+            let snippets: Vec<&str> = common.source.split('/').collect();
+            let mut section = &mut doc;
+            for snippet in &snippets[0..snippets.len() - 1] {
+                if section["sections"][*snippet].is_null() {
+                    section["sections"]
+                        .insert(
+                            snippet,
+                            json::object! {
+                                "sections": json::object!{},
+                                "pages": json::array![]
+                            },
+                        )
+                        .unwrap();
+                }
+                section = &mut section["sections"][*snippet];
+            }
+            section["pages"]
+                .push(json::array![common.title.as_str(), href])
+                .unwrap();
+        }
     }
 
     let f = std::fs::File::create(html_dir.join("nav.js")).unwrap();
