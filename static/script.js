@@ -42,6 +42,7 @@ function addSections(container, content) {
         var details = document.createElement("details");
         if (containsLink) {
             details.setAttribute('open', '');
+            details.classList.add('current-path');
         }
         details.appendChild(summary);
 
@@ -50,6 +51,7 @@ function addSections(container, content) {
             let childContainsLink = addSections(details, subpage);
             if (childContainsLink) {
                 details.setAttribute('open', '');
+                details.classList.add('current-path');
                 containsLink = true;
             }
         }
