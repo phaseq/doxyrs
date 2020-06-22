@@ -13,28 +13,41 @@ var my_link = undefined;
 // {% endfor %}
 function addSections(container, content) {
     var containsLink = false;
-    for (let [section_title, section] of Object.entries(content.sections)) {
-        var details = document.createElement("details");
 
+    let page = content[0];
+    let subpages = content[1];
+
+    // create link to this page
+    var link = document.createElement("a");
+    link.textContent = page[0];
+    link.href = pathToRoot + page[1];
+    if (link.href == document.location.href.split('#')[0]) {
+        link.classList.add('current');
+        my_link = link;
+        containsLink = true;
+    }
+
+    if (subpages.length == 0) {
+        container.appendChild(link);
+    }
+    else {
+        // create summary element
         var summary = document.createElement("summary");
+        if (link.href == document.location.href) {
+            summary.classList.add('current');
+        }
+        summary.appendChild(link);
 
-        if (section.hasOwnProperty("root")) {
-            var link = document.createElement("a");
-            link.textContent = section_title;
-            link.href = section.root[1];
-            if (link.href == document.location.href) {
-                link.classList.add('current');
-                my_link = link;
-                containsLink = true;
-            }
-            summary.appendChild(link);
-        } else {
-            summary.innerText = section_title;
+        // create details element
+        var details = document.createElement("details");
+        if (containsLink) {
+            details.setAttribute('open', '');
         }
         details.appendChild(summary);
 
-        if (section.hasOwnProperty("sections")) {
-            let childContainsLink = addSections(details, section);
+        // create subpage elements
+        for (let subpage of subpages) {
+            let childContainsLink = addSections(details, subpage);
             if (childContainsLink) {
                 details.setAttribute('open', '');
                 containsLink = true;
@@ -42,24 +55,11 @@ function addSections(container, content) {
         }
         container.appendChild(details);
     }
-    for (const page of content.pages) {
-        var link = document.createElement("a");
-        link.textContent = page[0];
-        link.href = page[1];
-
-        if (link.href == document.location.href) {
-            link.classList.add('current');
-            my_link = link;
-            containsLink = true;
-        }
-
-        container.appendChild(link);
-    }
     return containsLink;
 }
 
 let sidebar = document.getElementById("sidebar");
-addSections(sidebar, nav);
+addSections(sidebar, nav[0]);
 
 if (my_link !== undefined) {
     my_link.scrollIntoView({
