@@ -323,33 +323,39 @@ fn write_navigation(html_dir: &Path, compounds: &[Compound]) {
             }
             doc.push(to_nav_json_recursive(common, &ref_to_compound))
                 .unwrap();
-        } /*else {
-              let common = match compound {
-                  Compound::File(file) => &file.common,
-                  Compound::Page(page) => &page.common,
-              };
-              let href = format!("{}.html", common.ref_id);
+        } else {
+            let common = match compound {
+                Compound::File(file) => &file.common,
+                Compound::Page(page) => &page.common,
+            };
 
-              let snippets: Vec<&str> = common.source.split('/').collect();
-              let mut section = &mut doc;
-              for snippet in &snippets[0..snippets.len() - 1] {
-                  if section["sections"][*snippet].is_null() {
-                      section["sections"]
-                          .insert(
-                              snippet,
-                              json::object! {
-                                  "sections": json::object!{},
-                                  "pages": json::array![]
-                              },
-                          )
-                          .unwrap();
-                  }
-                  section = &mut section["sections"][*snippet];
-              }
-              section["pages"]
-                  .push(json::array![common.title.as_str(), href])
-                  .unwrap();
-          }*/
+            let snippets: Vec<&str> = common.source.split('/').collect();
+            let section =
+                snippets[0..snippets.len() - 1]
+                    .iter()
+                    .fold(&mut doc, |section, snippet| {
+                        let mut found_index: Option<usize> = None;
+                        for i in 0..section.len() {
+                            if section[i][0][0].as_str().unwrap() == *snippet {
+                                found_index = Some(i);
+                            }
+                        }
+                        match found_index {
+                            Some(found_index) => &mut section[found_index][1],
+                            None => {
+                                let header = json::array![*snippet, ""];
+                                section.push(json::array![header, json::array![]]).unwrap();
+                                let last_idx = section.len() - 1;
+                                &mut section[last_idx][1]
+                            }
+                        }
+                    });
+            let href = format!("{}.html", common.ref_id);
+            let this_page = json::array![common.title.as_str(), href.as_str()];
+            section
+                .push(json::array![this_page, json::array![]])
+                .unwrap();
+        }
     }
 
     let f = std::fs::File::create(html_dir.join("nav.js")).unwrap();

@@ -260,14 +260,14 @@ main img {
     /*content: "▾";*/
 }
 
-#sidebar details>a:before {
+#sidebar>a:before, #sidebar details>a:before {
     content: "○";
     display: inline-block;
     width: 1em;
     margin: 0;
 }
 
-#sidebar details>a {
+#sidebar>a, #sidebar details>a {
     margin-left: 1em;
 }
 
@@ -284,7 +284,7 @@ main img {
     background-color: #eee;
 }
 
-#sidebar details>a.current, #sidebar summary.current, #sidebar summary.current>a {
+#sidebar>a.current, #sidebar details>a.current, #sidebar summary.current, #sidebar summary.current>a {
     background-color: hsl(194, 86%, 41%) !important;
     color: white;
 }

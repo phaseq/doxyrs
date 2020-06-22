@@ -18,13 +18,23 @@ function addSections(container, content) {
     let subpages = content[1];
 
     // create link to this page
-    var link = document.createElement("a");
-    link.textContent = page[0];
-    link.href = pathToRoot + page[1];
-    if (link.href == document.location.href.split('#')[0]) {
-        link.classList.add('current');
-        my_link = link;
-        containsLink = true;
+    var isCurrentPage;
+    var link;
+    if (page[1] == "") {
+        link = document.createElement("span");
+        link.textContent = page[0];
+        isCurrentPage = false;
+    }
+    else {
+        link = document.createElement("a");
+        link.textContent = page[0];
+        link.href = pathToRoot + page[1];
+        isCurrentPage = link.href == document.location.href.split('#')[0];
+        if (isCurrentPage) {
+            link.classList.add('current');
+            my_link = link;
+            containsLink = true;
+        }
     }
 
     if (subpages.length == 0) {
@@ -33,7 +43,7 @@ function addSections(container, content) {
     else {
         // create summary element
         var summary = document.createElement("summary");
-        if (link.href == document.location.href) {
+        if (isCurrentPage) {
             summary.classList.add('current');
         }
         summary.appendChild(link);
@@ -61,7 +71,9 @@ function addSections(container, content) {
 }
 
 let sidebar = document.getElementById("sidebar");
-addSections(sidebar, nav[0]);
+for (let section of nav) {
+    addSections(sidebar, section);
+}
 
 if (my_link !== undefined) {
     my_link.scrollIntoView({
