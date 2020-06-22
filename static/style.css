@@ -226,9 +226,9 @@ main img {
 }
 
 #sidebar summary, #sidebar details>a, #sidebar>a {
-    border-radius: 0.5em;
-    padding: .3em;
-    margin: 0;
+    border-radius: 0.40em;
+    padding: .25em;
+    margin: 0.05em;
     word-wrap: break-word;
 }
 
@@ -250,12 +250,14 @@ main img {
 
 #sidebar summary:before {
     content: "+";
+    /*content: "▸";*/
     display: inline-block;
     width: 1em;
     margin: 0;
 }
 #sidebar details[open]>summary:before {
-    content: "-";
+    content: "–";
+    /*content: "▾";*/
 }
 
 #sidebar details>a:before {
@@ -278,16 +280,16 @@ main img {
     display: block;
 }
 
-#sidebar details>a:hover, #sidebar summary:hover {
-    background-color: #ced4da !important;
+#sidebar details>a:hover, #sidebar details>summary:hover {
+    background-color: #eee;
 }
 
-#sidebar details>a.current, #sidebar summary.current {
-    background-color: #5bc0de !important;
+#sidebar details>a.current, #sidebar summary.current, #sidebar summary.current>a {
+    background-color: hsl(194, 86%, 41%) !important;
     color: white;
 }
 #sidebar details.current-path>summary {
-    background-color: hsl(194, 66%, 91%);
+    background-color: hsl(194, 56%, 90%);
 }
 
 h1 {
