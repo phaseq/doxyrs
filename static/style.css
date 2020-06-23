@@ -261,7 +261,7 @@ main img {
 }
 
 #sidebar>a:before, #sidebar details>a:before {
-    content: "○";
+    content: "⚬";
     display: inline-block;
     width: 1em;
     margin: 0;
