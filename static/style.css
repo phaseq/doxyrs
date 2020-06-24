@@ -57,10 +57,22 @@ a:hover {
 .member .description {
     position: relative;
     display: block;
-    padding: .5rem 1rem;
+    padding: 0 1rem;
+    margin-top: 0;
     text-decoration: none;
     background-color: #fff;
 }
+
+.member .enumvalues {
+    padding: 0 1rem;
+}
+
+dd p, dd, dt, dl {
+    margin-top: 0;
+    padding-left: 0;
+    margin-left: 0;
+}
+
 
 .member_name {
     color: #805416;
@@ -285,11 +297,11 @@ main img {
 }
 
 #sidebar>a.current, #sidebar details>a.current, #sidebar summary.current, #sidebar summary.current>a {
-    background-color: hsl(194, 86%, 41%) !important;
+    background-color: hsl(215, 45%, 46%) !important;
     color: white;
 }
 #sidebar details.current-path>summary {
-    background-color: hsl(194, 56%, 90%);
+    background-color: hsl(215, 56%, 90%);
 }
 
 h1 {
@@ -300,13 +312,6 @@ h2 {
 }
 h3 {
     font-size: 1.1em;
-}
-dt {
-    font-weight: bold;
-    margin-top: 1em;
-}
-dd {
-    margin-top: .5em;
 }
 
 .alert {
