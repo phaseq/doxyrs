@@ -11,6 +11,10 @@ a:hover {
     text-decoration: none;
 }
 
+p {
+    margin-top: 0;
+}
+
 .scope,
 .member {
     position: relative;
@@ -21,7 +25,7 @@ a:hover {
     background-color: #fff;
     background-clip: border-box;
     border: 1px solid rgba(0,0,0,.125);
-    border-radius: .25rem;
+    border-radius: .25rem
 }
 
 .kind_part,
@@ -48,7 +52,7 @@ a:hover {
 
 .member .definition {
     padding: .5rem 1rem;
-    margin-bottom: 0;
+    margin-bottom: 1rem;
     background-color: rgba(0,0,0,.03);
     border-bottom: 1px solid rgba(0,0,0,.125);
     font-family: "Source Code Pro", Consolas, Monaco, monospace;
@@ -65,9 +69,15 @@ a:hover {
 
 .member .enumvalues {
     padding: 0 1rem;
+    margin-bottom: 1rem;
 }
 
-dd p, dd, dt, dl {
+.member .enumvalues dt {
+    padding-bottom: .2rem;
+    font-family: "Source Code Pro", Consolas, Monaco, monospace;
+}
+
+dd, dt, dl {
     margin-top: 0;
     padding-left: 0;
     margin-left: 0;
@@ -134,10 +144,6 @@ dd p, dd, dt, dl {
     border-bottom: 1px solid #e5e5e5;
     padding: 0.3em 0;
 }
-
-/*.parameterlist tr:last-child td {
-    border-bottom: none;
-}*/
 
 .parameterlist p {
     margin: 0;
