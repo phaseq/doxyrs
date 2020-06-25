@@ -1,46 +1,34 @@
-use gumdrop::Options;
 use rayon::prelude::*;
 use roxmltree::Document;
 use serde::Serialize;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use structopt::StructOpt;
 use tera::Tera;
 
 mod parser;
 
-#[derive(Debug, Options)]
+#[derive(Debug, StructOpt)]
 struct Cli {
-    #[options(help = "Print help message")]
+    /// Print help message
+    #[structopt(short, long)]
     help: bool,
 
-    #[options(no_short, help = "Root directory for the doxygen XML (required)")]
+    /// Root directory for the doxygen XML (required)
+    #[structopt(long)]
     source: String,
 
-    #[options(
-        no_short,
-        help = "Directory containing the doxygen XML output (required)"
-    )]
+    /// Directory containing the doxygen XML output (required)
+    #[structopt(long)]
     xml: String,
 
-    #[options(help = "HTML output directory (required)")]
+    /// HTML output directory (required)
+    #[structopt(long)]
     output: String,
 }
 
 fn main() {
-    let opt = Cli::parse_args_default_or_exit();
-    if opt.source.is_empty() || opt.xml.is_empty() || opt.output.is_empty() {
-        if opt.source.is_empty() {
-            println!("missing required argument: --source");
-        }
-        if opt.xml.is_empty() {
-            println!("missing required argument: --xml");
-        }
-        if opt.output.is_empty() {
-            println!("missing required argument: --output");
-        }
-        println!("\n{}", Cli::usage());
-        std::process::exit(1);
-    }
+    let opt = Cli::from_args();
 
     let source_dir = PathBuf::from(opt.source);
 
@@ -248,7 +236,7 @@ fn copy_static_files(html_dir: &Path) -> std::io::Result<()> {
 fn write_compound_file(tera: &Tera, file_name: &Path, file: &parser::File) {
     let context = tera::Context::from_serialize(file).unwrap();
     let content = tera.render("file.html", &context).unwrap();
-    //let content = html_minifier::minify(content).unwrap();
+    let content = html_minifier::minify(content).unwrap();
     let mut f = std::fs::File::create(file_name).unwrap();
     f.write_all(content.as_bytes()).unwrap();
 }
@@ -256,7 +244,7 @@ fn write_compound_file(tera: &Tera, file_name: &Path, file: &parser::File) {
 fn write_compound_page(tera: &Tera, file_name: &Path, page: &parser::Page) {
     let context = tera::Context::from_serialize(page).unwrap();
     let content = tera.render("page.html", &context).unwrap();
-    //let content = html_minifier::minify(content).unwrap();
+    let content = html_minifier::minify(content).unwrap();
     let mut f = std::fs::File::create(file_name).unwrap();
     f.write_all(content.as_bytes()).unwrap();
 }

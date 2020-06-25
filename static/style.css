@@ -14,11 +14,9 @@ a:hover {
 .scope,
 .member {
     position: relative;
-    display: flex;
     flex-direction: column;
     min-width: 0;
     word-wrap: break-word;
-    background-color: #fff;
     background-clip: border-box;
     border: 1px solid rgba(0,0,0,.125);
     border-radius: .25rem;
@@ -36,10 +34,11 @@ a:hover {
 
 .scope {
     padding: 0 .5rem;
+    margin-bottom: 2rem;
 }
 
 .member {
-    margin: .5rem 0;
+    margin: 1rem 0;
 }
 
 .member .definition:first-child {
@@ -49,8 +48,7 @@ a:hover {
 .member .definition {
     padding: .5rem 1rem;
     margin-bottom: 0;
-    background-color: rgba(0,0,0,.03);
-    border-bottom: 1px solid rgba(0,0,0,.125);
+    background-color: rgba(0,0,0,.015);
     font-family: "Source Code Pro", Consolas, Monaco, monospace;
 }
 
@@ -59,11 +57,12 @@ a:hover {
     display: block;
     padding: .5rem 1rem;
     text-decoration: none;
-    background-color: #fff;
+    border-top: 1px solid rgba(0,0,0,.125);
 }
 
 .member_name {
-    color: #805416;
+    color: #9a6e31;
+    font-weight: 600;
 }
 
 .templateparamlist {

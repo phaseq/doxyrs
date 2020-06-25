@@ -37,7 +37,9 @@
             <a name="{{member.ref_id}}"></a>
             <div class="member">
                 <div class="definition">{{member.definition | safe}}</div>
+                {% if member.description %}
                 <div class="description">{{member.description | safe}}</div>
+                {% endif %}
             </div>
             {% endfor %}
             {% endfor %}

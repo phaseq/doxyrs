@@ -284,7 +284,9 @@ fn parse_member(memberdef: Node, mut context: &mut Context) -> Member {
             &mut context,
         );
         brief + &detailed
-    };
+    }
+    .trim()
+    .to_owned();
     Member {
         ref_id,
         definition,
