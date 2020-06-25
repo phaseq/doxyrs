@@ -198,6 +198,12 @@ fn create_ref_to_path_map(compounds: &[Compound]) -> std::collections::HashMap<S
                                 member.ref_id.clone(),
                                 format!("{}#{}", filename, member.ref_id),
                             );
+                            for enum_value in &member.enum_values {
+                                ref_to_path.insert(
+                                    enum_value.ref_id.clone(),
+                                    format!("{}#{}", filename, enum_value.ref_id),
+                                );
+                            }
                         }
                     }
                 }

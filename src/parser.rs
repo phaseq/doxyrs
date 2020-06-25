@@ -46,6 +46,15 @@ pub struct Member {
     pub ref_id: String,
     pub definition: String,
     pub description: String,
+    pub enum_values: Vec<EnumValue>,
+}
+
+#[derive(Serialize)]
+pub struct EnumValue {
+    pub ref_id: String,
+    pub name: String,
+    pub initializer: Option<String>,
+    pub description: String,
 }
 
 struct Context {
@@ -246,25 +255,20 @@ fn parse_member(memberdef: Node, mut context: &mut Context) -> Member {
             "{}<span class=\"keyword\">using</span> <span class=\"member_name\">{}</span> = <span class=\"type\">{}</span>",
             template, name, return_type
         ),
-        "variable" | "property" => format!(
-            "<span class=\"type\">{}</span> <span class=\"member_name\">{}</span> <span class=\"defval\">{}</span>",
-            return_type,
-            name,
-            tera::escape_html(memberdef.get_child_value("initializer").unwrap_or_default())
-        ),
+        "variable" | "property" => {
+            let defval = if let Some(initializer) = memberdef.get_child("initializer"){
+                format!(" <span class=\"defval\">{}</span>", parse_text(initializer, &mut context))
+            } else {
+                "".to_owned()
+            };
+            format!(
+                "<span class=\"type\">{}</span> <span class=\"member_name\">{}</span>{}",
+                return_type,
+                name,
+                defval)
+        },
         "enum" => {
-            // TODO: embed documentation of enum parameters
-            let mut s = String::new();
-            s.push_str(&format!("<span class=\"keyword\">enum</span> <span class=\"member_name\">{}</span> {{<br>", name));
-            for value in memberdef.children().filter(|c| c.has_tag_name("enumvalue")) {
-                s.push_str(&format!(
-                    "&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"declname\">{}</span> <span class=\"defval\">{}</span><br/>",
-                    value.get_child_value("name").unwrap(),
-                    value.get_child_value("initializer").unwrap_or_default()
-                ))
-            }
-            s.push_str("}");
-            s
+            format!("<span class=\"keyword\">enum</span> <span class=\"member_name\">{}</span>", name)
         },
         //_ => format!("{}", memberdef.get_child_value("definition").unwrap()),
         _ => panic!(
@@ -272,6 +276,34 @@ fn parse_member(memberdef: Node, mut context: &mut Context) -> Member {
             memberdef.attribute("kind").unwrap(),
             ref_id
         ),
+    };
+
+    let enum_values = if memberdef.attribute("kind").unwrap() == "enum" {
+        memberdef
+            .children()
+            .filter(|c| c.has_tag_name("enumvalue"))
+            .map(|value| {
+                let description = {
+                    let brief =
+                        parse_text(value.get_child("briefdescription").unwrap(), &mut context);
+                    let detailed = parse_text(
+                        value.get_child("detaileddescription").unwrap(),
+                        &mut context,
+                    );
+                    brief + &detailed
+                };
+                EnumValue {
+                    ref_id: value.attribute("id").unwrap().to_owned(),
+                    name: value.get_child_value("name").unwrap().to_owned(),
+                    initializer: value
+                        .get_child("initializer")
+                        .map(|i| parse_text(i, &mut context)),
+                    description,
+                }
+            })
+            .collect()
+    } else {
+        vec![]
     };
 
     let description = {
@@ -291,6 +323,7 @@ fn parse_member(memberdef: Node, mut context: &mut Context) -> Member {
         ref_id,
         definition,
         description,
+        enum_values,
     }
 }
 
@@ -400,7 +433,7 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                         _ => capitalize_first_letter(&kind),
                     };
                     s.push_str(&format!(
-                        "<p>{}: {}</p>",
+                        "<dl><dt>{}</dt><dd>{}</dd></dl>",
                         kind_name,
                         parse_text(c.get_child("para").unwrap(), &mut context)
                     ));
@@ -432,7 +465,16 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                 ));
             }
             "parameterlist" => {
-                s.push_str("<table class=\"parameterlist\">");
+                let use_table = match c.attribute("kind").unwrap() {
+                    "param" | "templateparam" => true,
+                    "exception" => false,
+                    kind @ _ => panic!("parameterlist kind not implemented: {}", kind),
+                };
+                if use_table {
+                    s.push_str("<table class=\"parameterlist\">");
+                } else {
+                    s.push_str("<dl class=\"parameterlist\">");
+                }
                 for item in c.children().filter(|n| n.has_tag_name("parameteritem")) {
                     let name = item.get_child("parameternamelist").unwrap();
                     if let Some(name) = name.get_child_value("parametername") {
@@ -440,14 +482,25 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                             item.get_child("parameterdescription").unwrap(),
                             &mut context,
                         );
-                        s.push_str(&format!(
-                            "<tr><td><span class=\"declname\">{}:</span></td><td>{}</td></tr>",
-                            tera::escape_html(name),
-                            description
-                        ));
+                        let name = tera::escape_html(name);
+                        if use_table {
+                            s.push_str(&format!(
+                                "<tr><td><span class=\"declname\">{}:</span></td><td>{}</td></tr>",
+                                name, description
+                            ));
+                        } else {
+                            s.push_str(&format!(
+                                "<dt>Throws <span class=\"declname\">{}:</span></dt><dd>{}</dd>",
+                                name, description
+                            ));
+                        }
                     }
                 }
-                s.push_str("</table>");
+                if use_table {
+                    s.push_str("</table>");
+                } else {
+                    s.push_str("</dl>");
+                }
             }
             tag @ "itemizedlist" | tag @ "orderedlist" => {
                 let tag = match tag {

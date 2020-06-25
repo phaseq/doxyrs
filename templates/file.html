@@ -40,6 +40,15 @@
                 {% if member.description %}
                 <div class="description">{{member.description | safe}}</div>
                 {% endif %}
+                {% if member.enum_values %}
+                <dl class="enumvalues">
+                    {% for enum_value in member.enum_values %}
+                    <dt><a name="{{enum_value.ref_id}}"></a><span class="declname">{{enum_value.name}}</span> <span
+                            class="defval">{{enum_value.initializer | safe}}</span></dt>
+                    <dd class="description">{{enum_value.description | safe}}</dd>
+                    {% endfor %}
+                </dl>
+                {% endif %}
             </div>
             {% endfor %}
             {% endfor %}

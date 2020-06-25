@@ -19,7 +19,7 @@ a:hover {
     word-wrap: break-word;
     background-clip: border-box;
     border: 1px solid rgba(0,0,0,.125);
-    border-radius: .25rem;
+    border-radius: .25rem
 }
 
 .kind_part,
@@ -47,7 +47,6 @@ a:hover {
 
 .member .definition {
     padding: .5rem 1rem;
-    margin-bottom: 0;
     background-color: rgba(0,0,0,.015);
     font-family: "Source Code Pro", Consolas, Monaco, monospace;
 }
@@ -55,10 +54,25 @@ a:hover {
 .member .description {
     position: relative;
     display: block;
-    padding: .5rem 1rem;
+    padding: 0 1rem;
     text-decoration: none;
     border-top: 1px solid rgba(0,0,0,.125);
 }
+
+.member .enumvalues {
+    padding: 0 1rem;
+    margin-bottom: 1rem;
+}
+
+.member .enumvalues dt {
+    padding-bottom: .2rem;
+    font-family: "Source Code Pro", Consolas, Monaco, monospace;
+}
+
+dd, dt, dl {
+    margin-top: 0;
+}
+
 
 .member_name {
     color: #9a6e31;
@@ -99,6 +113,7 @@ a:hover {
 
 .declname {
     color: #006ee0;
+    font-family: "Source Code Pro", Consolas, Monaco, monospace;
 }
 
 .defval,
@@ -108,6 +123,7 @@ a:hover {
 
 .parameterlist {
     border-collapse: collapse;
+    margin: .5em 0;
 }
 
 .parameterlist tr td:first-child {
@@ -121,10 +137,6 @@ a:hover {
     border-bottom: 1px solid #e5e5e5;
     padding: 0.3em 0;
 }
-
-/*.parameterlist tr:last-child td {
-    border-bottom: none;
-}*/
 
 .parameterlist p {
     margin: 0;
@@ -260,7 +272,7 @@ main img {
 }
 
 #sidebar>a:before, #sidebar details>a:before {
-    content: "○";
+    content: "⚬";
     display: inline-block;
     width: 1em;
     margin: 0;
@@ -284,11 +296,11 @@ main img {
 }
 
 #sidebar>a.current, #sidebar details>a.current, #sidebar summary.current, #sidebar summary.current>a {
-    background-color: hsl(194, 86%, 41%) !important;
+    background-color: hsl(215, 45%, 46%) !important;
     color: white;
 }
 #sidebar details.current-path>summary {
-    background-color: hsl(194, 56%, 90%);
+    background-color: hsl(215, 56%, 90%);
 }
 
 h1 {
@@ -299,13 +311,6 @@ h2 {
 }
 h3 {
     font-size: 1.1em;
-}
-dt {
-    font-weight: bold;
-    margin-top: 1em;
-}
-dd {
-    margin-top: .5em;
 }
 
 .alert {
