@@ -7,10 +7,10 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-roxmltree = "0.11.0"
-tera = { version = "1.3.0", default-features = false }
-serde = { version = "1.0.111", features = ["derive"] }
-rayon = { version = "1.3.0", default-features = false }
+roxmltree = "0.13.0"
+tera = { version = "1.3.1", default-features = false }
+serde = { version = "1.0.114", features = ["derive"] }
+rayon = { version = "1.3.1", default-features = false }
 regex = { version = "1.3.9", default-features = false }
 html-minifier = "1.2.1"
 json = "0.12.4"
