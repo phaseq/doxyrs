@@ -482,21 +482,20 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                 }
                 for item in c.children().filter(|n| n.has_tag_name("parameteritem")) {
                     let parameternamelist = item.get_child("parameternamelist").unwrap();
-                    let mut parameternames = parameternamelist
-                        .children()
-                        .filter(|c| c.has_tag_name("parameternamelist"));
-                    if let Some(parametername) = parameternames.next() {
-                        let mut description = String::new();
-                        for other_name in parameternames.filter_map(|c| c.text()) {
-                            description += other_name;
-                            description += " ";
-                        }
-                        let description = description
-                            + &parse_text(
-                                item.get_child("parameterdescription").unwrap(),
-                                &mut context,
-                            );
-                        let name = tera::escape_html(parametername.text().unwrap());
+                    let names = itertools::join(
+                        parameternamelist
+                            .children()
+                            .filter(|c| c.has_tag_name("parametername"))
+                            .map(|c| c.text())
+                            .flatten(),
+                        ", ",
+                    );
+                    if !names.is_empty() {
+                        let description = parse_text(
+                            item.get_child("parameterdescription").unwrap(),
+                            &mut context,
+                        );
+                        let name = tera::escape_html(&names);
                         if use_table {
                             s.push_str(&format!(
                                 "<tr><td><span class=\"declname\">{}:</span></td><td>{}</td></tr>",
