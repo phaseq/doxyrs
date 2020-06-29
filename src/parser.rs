@@ -439,6 +439,11 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                     ));
                 }
             }
+            "blockquote" => {
+                s.push_str("<blockquote>");
+                s.push_str(&parse_text(c.get_child("para").unwrap(), &mut context));
+                s.push_str("</blockquote>");
+            }
             "ref" => {
                 // TODO: add link
                 s.push_str(&format!(
@@ -476,13 +481,22 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                     s.push_str("<dl class=\"parameterlist\">");
                 }
                 for item in c.children().filter(|n| n.has_tag_name("parameteritem")) {
-                    let name = item.get_child("parameternamelist").unwrap();
-                    if let Some(name) = name.get_child_value("parametername") {
-                        let description = parse_text(
-                            item.get_child("parameterdescription").unwrap(),
-                            &mut context,
-                        );
-                        let name = tera::escape_html(name);
+                    let parameternamelist = item.get_child("parameternamelist").unwrap();
+                    let mut parameternames = parameternamelist
+                        .children()
+                        .filter(|c| c.has_tag_name("parameternamelist"));
+                    if let Some(parametername) = parameternames.next() {
+                        let mut description = String::new();
+                        for other_name in parameternames.filter_map(|c| c.text()) {
+                            description += other_name;
+                            description += " ";
+                        }
+                        let description = description
+                            + &parse_text(
+                                item.get_child("parameterdescription").unwrap(),
+                                &mut context,
+                            );
+                        let name = tera::escape_html(parametername.text().unwrap());
                         if use_table {
                             s.push_str(&format!(
                                 "<tr><td><span class=\"declname\">{}:</span></td><td>{}</td></tr>",
@@ -616,10 +630,7 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                             ));
                         }
                         "listitem" => {
-                            s.push_str(&format!(
-                                "<dd>{}</dd>",
-                                parse_text(term.get_child("para").unwrap(), &mut context)
-                            ));
+                            s.push_str(&format!("<dd>{}</dd>", parse_text(term, &mut context)));
                         }
                         "" => {}
                         tag @ _ => {
@@ -713,12 +724,16 @@ pub trait NodeExt<'n1, 'n2> {
 }
 impl<'n1, 'n2> NodeExt<'n1, 'n2> for Node<'n1, 'n2> {
     fn get_child<'a>(&'a self, tag: &str) -> Option<Node<'n1, 'n2>> {
-        self.children().find(|n| n.has_tag_name(tag))
+        let mut children = self.children().filter(|n| n.has_tag_name(tag));
+        let child = children.next();
+        //assert!(child.is_none() || children.next().is_none());
+        if child.is_none() || children.next().is_some() {
+            None
+        } else {
+            child
+        }
     }
     fn get_child_value<'a>(&'a self, tag: &str) -> Option<&'a str> {
-        self.children()
-            .find(|n| n.has_tag_name(tag))
-            .map(|n| n.text())
-            .flatten()
+        self.get_child(tag).map(|n| n.text()).flatten()
     }
 }

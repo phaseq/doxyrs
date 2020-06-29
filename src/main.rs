@@ -67,6 +67,7 @@ fn main() {
     // TODO: we could use par_bridge if we don't care about the order of nodes. Right now we do.
     let compounds: Vec<Compound> = compound_nodes
         .par_iter()
+        //.iter()
         .filter_map(|compound| {
             /*let name = compound
                 .children()
@@ -106,13 +107,15 @@ fn main() {
         match compound {
             Compound::File(mut file) => {
                 let file_dir = file.common.source.rsplitn(2, '/').nth(1).unwrap();
+                let file_path = source_dir.join(&file.common.source);
+                let file_path = file_path.to_str().unwrap();
 
                 // update deferred links
                 for scope in &mut file.scopes {
                     for section in &mut scope.sections {
                         for member in &mut section.members {
-                            member.definition = relink(&member.definition, file_dir);
-                            member.description = relink(&member.description, file_dir);
+                            member.definition = relink(&member.definition, file_dir, &file_path);
+                            member.description = relink(&member.description, file_dir, &file_path);
                         }
                     }
                 }
@@ -122,9 +125,11 @@ fn main() {
             }
             Compound::Page(mut page) => {
                 let file_dir = page.common.source.rsplitn(2, '/').nth(1).unwrap_or(".");
+                let file_path = source_dir.join(&page.common.source);
+                let file_path = file_path.to_str().unwrap();
 
                 // update deferred links
-                page.description = relink(&page.description, file_dir);
+                page.description = relink(&page.description, file_dir, &file_path);
 
                 let file_name = html_dir.join(format!("{}.html", page.common.ref_id));
                 write_compound_page(&tera, &file_name, &page);
@@ -142,18 +147,18 @@ fn create_relinker(
     source_dir: &Path,
     html_dir: &Path,
     compounds: &[Compound],
-) -> Box<dyn Fn(&str, &str) -> String + Sync> {
+) -> Box<dyn Fn(&str, &str, &str) -> String + Sync> {
     let re_refs = regex::Regex::new("refid://([^\"]*)").unwrap();
     let re_imgs = regex::Regex::new("doxyimg://([^\"]*)").unwrap();
     let ref_to_path = create_ref_to_path_map(compounds);
     let source_dir = source_dir.to_str().unwrap().to_owned();
     let html_dir = html_dir.to_str().unwrap().to_owned();
 
-    Box::new(move |v, img_dir| -> String {
+    Box::new(move |v, img_dir, _file_path| -> String {
         let v = re_refs.replace_all(v, |caps: &regex::Captures| {
             let cap = &caps[1];
             ref_to_path.get(cap).map(|s| s.as_str()).unwrap_or_else(|| {
-                //println!("WARNING: ref not found: {}", cap);
+                // println!("WARNING: {}: ref not found: {}", file_path, cap);
                 "refid://not-found"
             })
         });
