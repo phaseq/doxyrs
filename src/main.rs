@@ -172,7 +172,7 @@ fn create_relinker(
                 // TODO: ensure uniqueness!
                 let target = format!("{}/images/{}", html_dir, filename);
                 // TODO: check timestamps or similar!
-                if !std::path::PathBuf::from(&source).exists() {
+                if !std::path::PathBuf::from(&target).exists() {
                     std::fs::copy(&source, target).unwrap();
                 }
                 format!("images/{}", filename)
