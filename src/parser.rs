@@ -160,7 +160,7 @@ fn parse_compound_scope(
     parent_file_name: &str,
     xml_dir: &Path,
     ref_id: &str,
-    mut context: &mut Context,
+    context: &mut Context,
 ) -> Option<Scope> {
     let file_name = xml_dir.join(ref_id.to_owned() + ".xml");
     let content = std::fs::read_to_string(file_name);
@@ -180,9 +180,9 @@ fn parse_compound_scope(
 
     let name = format!(
         "{} <span class=\"kind_part\">{}</span> {}",
-        render_templateparamlist(compounddef, &mut context),
+        render_templateparamlist(compounddef, context),
         kind,
-        render_scope_name(&compounddef.get_child_value("compoundname").unwrap())
+        render_scope_name(compounddef.get_child_value("compoundname").unwrap())
     );
 
     let sections = compounddef
@@ -192,7 +192,7 @@ fn parse_compound_scope(
             let name = sectiondef.get_child_value("header").map(|v| v.to_owned());
             let description = sectiondef
                 .get_child("description")
-                .map(|d| parse_text(d, &mut context));
+                .map(|d| parse_text(d, context));
             let members = sectiondef
                 .children()
                 .filter(|n| {
@@ -205,7 +205,7 @@ fn parse_compound_scope(
                             .unwrap()
                             .ends_with(parent_file_name)
                 })
-                .map(|m| parse_member(m, &mut context))
+                .map(|m| parse_member(m, context))
                 .collect();
             Section {
                 name,
@@ -235,15 +235,15 @@ fn render_scope_name(name: &str) -> String {
     name
 }
 
-fn parse_member(memberdef: Node, mut context: &mut Context) -> Member {
+fn parse_member(memberdef: Node, context: &mut Context) -> Member {
     let ref_id = memberdef.attribute("id").unwrap().to_owned();
-    let return_type = parse_text(memberdef.get_child("type").unwrap(), &mut context);
+    let return_type = parse_text(memberdef.get_child("type").unwrap(), context);
     let name = memberdef
         .get_child_value("name")
-        .map(|v| tera::escape_html(v))
+        .map(tera::escape_html)
         .unwrap();
-    let template = render_templateparamlist(memberdef, &mut context);
-    let args = render_function_args(memberdef, &mut context);
+    let template = render_templateparamlist(memberdef, context);
+    let args = render_function_args(memberdef, context);
 
     let definition = match memberdef.attribute("kind").unwrap() {
         "function" | "event" if !return_type.is_empty() => format!(
@@ -257,7 +257,7 @@ fn parse_member(memberdef: Node, mut context: &mut Context) -> Member {
         ),
         "variable" | "property" => {
             let defval = if let Some(initializer) = memberdef.get_child("initializer"){
-                format!(" <span class=\"defval\">{}</span>", parse_text(initializer, &mut context))
+                format!(" <span class=\"defval\">{}</span>", parse_text(initializer, context))
             } else {
                 "".to_owned()
             };
@@ -284,12 +284,9 @@ fn parse_member(memberdef: Node, mut context: &mut Context) -> Member {
             .filter(|c| c.has_tag_name("enumvalue"))
             .map(|value| {
                 let description = {
-                    let brief =
-                        parse_text(value.get_child("briefdescription").unwrap(), &mut context);
-                    let detailed = parse_text(
-                        value.get_child("detaileddescription").unwrap(),
-                        &mut context,
-                    );
+                    let brief = parse_text(value.get_child("briefdescription").unwrap(), context);
+                    let detailed =
+                        parse_text(value.get_child("detaileddescription").unwrap(), context);
                     brief + &detailed
                 };
                 EnumValue {
@@ -297,7 +294,7 @@ fn parse_member(memberdef: Node, mut context: &mut Context) -> Member {
                     name: value.get_child_value("name").unwrap().to_owned(),
                     initializer: value
                         .get_child("initializer")
-                        .map(|i| parse_text(i, &mut context)),
+                        .map(|i| parse_text(i, context)),
                     description,
                 }
             })
@@ -307,14 +304,8 @@ fn parse_member(memberdef: Node, mut context: &mut Context) -> Member {
     };
 
     let description = {
-        let brief = parse_text(
-            memberdef.get_child("briefdescription").unwrap(),
-            &mut context,
-        );
-        let detailed = parse_text(
-            memberdef.get_child("detaileddescription").unwrap(),
-            &mut context,
-        );
+        let brief = parse_text(memberdef.get_child("briefdescription").unwrap(), context);
+        let detailed = parse_text(memberdef.get_child("detaileddescription").unwrap(), context);
         brief + &detailed
     }
     .trim()
@@ -327,7 +318,7 @@ fn parse_member(memberdef: Node, mut context: &mut Context) -> Member {
     }
 }
 
-fn render_templateparamlist(memberdef: Node, mut context: &mut Context) -> String {
+fn render_templateparamlist(memberdef: Node, context: &mut Context) -> String {
     if let Some(templateparamlist) = memberdef.get_child("templateparamlist") {
         let mut s = String::new();
         for param in templateparamlist
@@ -337,9 +328,9 @@ fn render_templateparamlist(memberdef: Node, mut context: &mut Context) -> Strin
             if !s.is_empty() {
                 s.push_str(", ");
             }
-            s.push_str(&parse_text(param.get_child("type").unwrap(), &mut context));
+            s.push_str(&parse_text(param.get_child("type").unwrap(), context));
             if let Some(defval) = param.get_child_value("defval") {
-                s.push_str(&defval);
+                s.push_str(defval);
             }
         }
         format!(
@@ -351,27 +342,27 @@ fn render_templateparamlist(memberdef: Node, mut context: &mut Context) -> Strin
     }
 }
 
-fn render_function_args(memberdef: Node, mut context: &mut Context) -> String {
+fn render_function_args(memberdef: Node, context: &mut Context) -> String {
     let args: Vec<_> = memberdef
         .children()
         .filter(|n| n.has_tag_name("param"))
         .map(|param| {
             let mut result = format!(
                 "<span class=\"type\">{}</span>",
-                parse_text(param.get_child("type").unwrap(), &mut context)
+                parse_text(param.get_child("type").unwrap(), context)
                     .replace(" &amp;", "&amp;")
                     .replace(" *", "*")
             );
             if let Some(declname) = param.get_child("declname") {
                 result.push_str(&format!(
                     " <span class=\"declname\">{}</span>",
-                    parse_text(declname, &mut context)
+                    parse_text(declname, context)
                 ));
             }
             if let Some(defval) = param.get_child("defval") {
                 result.push_str(&format!(
                     " = <span class=\"defval\">{}</span>",
-                    parse_text(defval, &mut context)
+                    parse_text(defval, context)
                 ));
             }
             result
@@ -402,7 +393,7 @@ fn render_function_args(memberdef: Node, mut context: &mut Context) -> String {
     s
 }
 
-fn parse_text(node: Node, mut context: &mut Context) -> String {
+fn parse_text(node: Node, context: &mut Context) -> String {
     let mut s = String::new();
     let mut skip_next_chars = 0usize;
     for c in node.children() {
@@ -412,7 +403,7 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                 skip_next_chars = 0usize;
             }
             "para" => {
-                s.push_str(&format!("<p>{}</p>", parse_text(c, &mut context)));
+                s.push_str(&format!("<p>{}</p>", parse_text(c, context)));
             }
             "simplesect" => {
                 let kind = c.attribute("kind").unwrap();
@@ -425,23 +416,23 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                     s.push_str(&format!(
                         "<div class=\"alert {}\">{}</div>",
                         css_class,
-                        parse_text(c.get_child("para").unwrap(), &mut context)
+                        parse_text(c.get_child("para").unwrap(), context)
                     ));
                 } else {
                     let kind_name = match kind {
                         "return" => "Returns".to_owned(),
-                        _ => capitalize_first_letter(&kind),
+                        _ => capitalize_first_letter(kind),
                     };
                     s.push_str(&format!(
                         "<dl><dt>{}</dt><dd>{}</dd></dl>",
                         kind_name,
-                        parse_text(c.get_child("para").unwrap(), &mut context)
+                        parse_text(c.get_child("para").unwrap(), context)
                     ));
                 }
             }
             "blockquote" => {
                 s.push_str("<blockquote>");
-                s.push_str(&parse_text(c.get_child("para").unwrap(), &mut context));
+                s.push_str(&parse_text(c.get_child("para").unwrap(), context));
                 s.push_str("</blockquote>");
             }
             "ref" => {
@@ -456,13 +447,12 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                 s.push_str(&format!(
                     "<a href=\"{}\">{}</a>",
                     c.attribute("url").unwrap(),
-                    parse_text(c, &mut context)
+                    parse_text(c, context)
                 ));
             }
             "xrefsect" => {
                 let xreftitle = c.get_child_value("xreftitle").unwrap();
-                let xrefdescription =
-                    parse_text(c.get_child("xrefdescription").unwrap(), &mut context);
+                let xrefdescription = parse_text(c.get_child("xrefdescription").unwrap(), context);
                 let css_class = "alert-danger";
                 s.push_str(&format!(
                     "<div class=\"alert {}\"><h5>{}</h5>{}</div>",
@@ -473,7 +463,7 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                 let use_table = match c.attribute("kind").unwrap() {
                     "param" | "templateparam" => true,
                     "exception" => false,
-                    kind @ _ => panic!("parameterlist kind not implemented: {}", kind),
+                    kind => panic!("parameterlist kind not implemented: {}", kind),
                 };
                 if use_table {
                     s.push_str("<table class=\"parameterlist\">");
@@ -482,19 +472,15 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                 }
                 for item in c.children().filter(|n| n.has_tag_name("parameteritem")) {
                     let parameternamelist = item.get_child("parameternamelist").unwrap();
-                    let names = itertools::join(
-                        parameternamelist
-                            .children()
-                            .filter(|c| c.has_tag_name("parametername"))
-                            .map(|c| c.text())
-                            .flatten(),
-                        ", ",
-                    );
+                    let names = parameternamelist
+                        .children()
+                        .filter(|c| c.has_tag_name("parametername"))
+                        .flat_map(|c| c.text())
+                        .collect::<Vec<_>>()
+                        .join(", ");
                     if !names.is_empty() {
-                        let description = parse_text(
-                            item.get_child("parameterdescription").unwrap(),
-                            &mut context,
-                        );
+                        let description =
+                            parse_text(item.get_child("parameterdescription").unwrap(), context);
                         let name = tera::escape_html(&names);
                         if use_table {
                             s.push_str(&format!(
@@ -523,7 +509,7 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                 };
                 s.push_str(&format!("<{}>", tag));
                 for item in c.children().filter(|n| n.has_tag_name("listitem")) {
-                    s.push_str(&format!("<li>{}</li>", parse_text(item, &mut context)));
+                    s.push_str(&format!("<li>{}</li>", parse_text(item, context)));
                 }
                 s.push_str(&format!("</{}>", tag));
             }
@@ -538,7 +524,7 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                         } else {
                             s.push_str("<td>");
                         }
-                        s.push_str(&parse_text(entry, &mut context));
+                        s.push_str(&parse_text(entry, context));
                         if is_th {
                             s.push_str("</th>");
                         } else {
@@ -551,7 +537,7 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
             }
             "programlisting" => {
                 s.push_str("<pre class=\"programlisting\">");
-                let mut dedent = usize::max_value();
+                let mut dedent = usize::MAX;
                 for codeline in c.children().filter(|n| n.has_tag_name("codeline")) {
                     // count leading spaces
                     let mut n_indents = 0;
@@ -576,7 +562,7 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                     }
                 }
                 for codeline in c.children().filter(|n| n.has_tag_name("codeline")) {
-                    let codeline = format!("{}<br/>", parse_text(codeline, &mut context));
+                    let codeline = format!("{}<br/>", parse_text(codeline, context));
                     let codeline = codeline.replacen("&nbsp;", "", dedent);
                     s.push_str(&codeline);
                 }
@@ -586,7 +572,7 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                 s.push_str(&format!(
                     "<span class=\"highlight-{}\">{}</span>",
                     c.attribute("class").unwrap(),
-                    parse_text(c, &mut context)
+                    parse_text(c, context)
                 ));
             }
             "image" => {
@@ -625,14 +611,14 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                         "varlistentry" => {
                             s.push_str(&format!(
                                 "<dt>{}</dt>",
-                                parse_text(term.get_child("term").unwrap(), &mut context)
+                                parse_text(term.get_child("term").unwrap(), context)
                             ));
                         }
                         "listitem" => {
-                            s.push_str(&format!("<dd>{}</dd>", parse_text(term, &mut context)));
+                            s.push_str(&format!("<dd>{}</dd>", parse_text(term, context)));
                         }
                         "" => {}
-                        tag @ _ => {
+                        tag => {
                             panic!("unexpected tag: {}", tag);
                         }
                     }
@@ -645,22 +631,22 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
             }
             // tag pass-through
             "bold" => {
-                s.push_str(&format!("<bold>{}</bold>", parse_text(c, &mut context)));
+                s.push_str(&format!("<bold>{}</bold>", parse_text(c, context)));
             }
             "emphasis" => {
-                s.push_str(&format!("<em>{}</em>", parse_text(c, &mut context)));
+                s.push_str(&format!("<em>{}</em>", parse_text(c, context)));
             }
             "verbatim" | "preformatted" => {
-                s.push_str(&format!("<pre>{}</pre>", parse_text(c, &mut context)));
+                s.push_str(&format!("<pre>{}</pre>", parse_text(c, context)));
             }
             "computeroutput" => {
-                s.push_str(&format!("<tt>{}</tt>", parse_text(c, &mut context)));
+                s.push_str(&format!("<tt>{}</tt>", parse_text(c, context)));
             }
             "superscript" => {
-                s.push_str(&format!("<sup>{}</sup>", parse_text(c, &mut context)));
+                s.push_str(&format!("<sup>{}</sup>", parse_text(c, context)));
             }
             "subscript" => {
-                s.push_str(&format!("<sub>{}</sub>", parse_text(c, &mut context)));
+                s.push_str(&format!("<sub>{}</sub>", parse_text(c, context)));
             }
             tag @ "sect1" | tag @ "sect2" | tag @ "sect3" | tag @ "sect4" | tag @ "sect5" => {
                 let title = c.children().find(|n| n.has_tag_name("title")).unwrap();
@@ -673,10 +659,10 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                 s.push_str(&format!(
                     "<h{}>{}</h{}>",
                     level,
-                    parse_text(title, &mut context),
+                    parse_text(title, context),
                     level
                 ));
-                s.push_str(&parse_text(c, &mut context));
+                s.push_str(&parse_text(c, context));
             }
             "title" => {} // handled by sectN
             "heading" => {
@@ -684,7 +670,7 @@ fn parse_text(node: Node, mut context: &mut Context) -> String {
                 s.push_str(&format!(
                     "<h{}>{}</h{}>",
                     level,
-                    parse_text(c, &mut context),
+                    parse_text(c, context),
                     level
                 ));
             }
@@ -733,6 +719,6 @@ impl<'n1, 'n2> NodeExt<'n1, 'n2> for Node<'n1, 'n2> {
         }
     }
     fn get_child_value<'a>(&'a self, tag: &str) -> Option<&'a str> {
-        self.get_child(tag).map(|n| n.text()).flatten()
+        self.get_child(tag).and_then(|n| n.text())
     }
 }

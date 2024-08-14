@@ -1,34 +1,29 @@
+use clap::Parser;
 use rayon::prelude::*;
 use roxmltree::Document;
-use serde::Serialize;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use structopt::StructOpt;
 use tera::Tera;
 
 mod parser;
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 struct Cli {
-    /// Print help message
-    #[structopt(short, long)]
-    help: bool,
-
     /// Root directory for the doxygen XML (required)
-    #[structopt(long)]
+    #[arg(long)]
     source: String,
 
     /// Directory containing the doxygen XML output (required)
-    #[structopt(long)]
+    #[arg(long)]
     xml: String,
 
     /// HTML output directory (required)
-    #[structopt(long)]
+    #[arg(long)]
     output: String,
 }
 
 fn main() {
-    let opt = Cli::from_args();
+    let opt = Cli::parse();
 
     let source_dir = PathBuf::from(opt.source);
 
@@ -39,7 +34,7 @@ fn main() {
     }
 
     let html_dir = PathBuf::from(opt.output);
-    std::fs::create_dir_all(&html_dir.join("images")).unwrap();
+    std::fs::create_dir_all(html_dir.join("images")).unwrap();
 
     copy_static_files(&html_dir).unwrap();
 
@@ -106,7 +101,7 @@ fn main() {
     compounds.into_iter().par_bridge().for_each(|compound| {
         match compound {
             Compound::File(mut file) => {
-                let file_dir = file.common.source.rsplitn(2, '/').nth(1).unwrap();
+                let file_dir = file.common.source.rsplit_once('/').unwrap().0;
                 let file_path = source_dir.join(&file.common.source);
                 let file_path = file_path.to_str().unwrap();
 
@@ -114,8 +109,8 @@ fn main() {
                 for scope in &mut file.scopes {
                     for section in &mut scope.sections {
                         for member in &mut section.members {
-                            member.definition = relink(&member.definition, file_dir, &file_path);
-                            member.description = relink(&member.description, file_dir, &file_path);
+                            member.definition = relink(&member.definition, file_dir, file_path);
+                            member.description = relink(&member.description, file_dir, file_path);
                         }
                     }
                 }
@@ -124,12 +119,17 @@ fn main() {
                 write_compound_file(&tera, &file_name, &file);
             }
             Compound::Page(mut page) => {
-                let file_dir = page.common.source.rsplitn(2, '/').nth(1).unwrap_or(".");
+                let file_dir = page
+                    .common
+                    .source
+                    .rsplit_once('/')
+                    .map(|x| x.0)
+                    .unwrap_or(".");
                 let file_path = source_dir.join(&page.common.source);
                 let file_path = file_path.to_str().unwrap();
 
                 // update deferred links
-                page.description = relink(&page.description, file_dir, &file_path);
+                page.description = relink(&page.description, file_dir, file_path);
 
                 let file_name = html_dir.join(format!("{}.html", page.common.ref_id));
                 write_compound_page(&tera, &file_name, &page);
@@ -143,11 +143,8 @@ enum Compound {
     Page(parser::Page),
 }
 
-fn create_relinker(
-    source_dir: &Path,
-    html_dir: &Path,
-    compounds: &[Compound],
-) -> Box<dyn Fn(&str, &str, &str) -> String + Sync> {
+type RelinkFn = dyn Fn(&str, &str, &str) -> String + Sync;
+fn create_relinker(source_dir: &Path, html_dir: &Path, compounds: &[Compound]) -> Box<RelinkFn> {
     let re_refs = regex::Regex::new("refid://([^\"]*)").unwrap();
     let re_imgs = regex::Regex::new("doxyimg://([^\"]*)").unwrap();
     let ref_to_path = create_ref_to_path_map(compounds);
@@ -260,22 +257,22 @@ fn write_compound_page(tera: &Tera, file_name: &Path, page: &parser::Page) {
     f.write_all(content.as_bytes()).unwrap();
 }
 
-#[derive(Serialize)]
+/*#[derive(Serialize)]
 struct Nav<'a> {
     sections: Vec<NavSection<'a>>,
-}
+}*/
 
-#[derive(Serialize)]
+/*#[derive(Serialize)]
 struct NavSection<'a> {
     title: &'a str,
     children: Vec<NavLink<'a>>,
-}
+}*/
 
-#[derive(Serialize)]
+/*#[derive(Serialize)]
 struct NavLink<'a> {
     href: String,
     text: &'a str,
-}
+}*/
 
 fn to_nav_json_recursive(
     common: &parser::PageCommon,
@@ -290,12 +287,12 @@ fn to_nav_json_recursive(
     for subpage_ref in common.subpage_refs.iter() {
         let subpage = ref_to_compound[subpage_ref.as_str()];
         if let Compound::Page(subpage) = subpage {
-            let subpage = to_nav_json_recursive(&subpage.common, &ref_to_compound);
+            let subpage = to_nav_json_recursive(&subpage.common, ref_to_compound);
             subpages.push(subpage).unwrap();
         }
     }
 
-    return json::array![this_page, subpages];
+    json::array![this_page, subpages]
 }
 
 fn write_navigation(html_dir: &Path, compounds: &[Compound]) {
@@ -306,9 +303,9 @@ fn write_navigation(html_dir: &Path, compounds: &[Compound]) {
             Compound::File(file) => &file.common,
             Compound::Page(page) => &page.common,
         };
-        ref_to_compound.insert(&common.ref_id, &compound);
+        ref_to_compound.insert(&common.ref_id, compound);
         for child in common.subpage_refs.iter() {
-            ref_to_parent.insert(&child, &common.ref_id);
+            ref_to_parent.insert(child, &common.ref_id);
         }
     }
 
@@ -317,7 +314,7 @@ fn write_navigation(html_dir: &Path, compounds: &[Compound]) {
     for compound in compounds {
         if let Compound::Page(page) = compound {
             let common = &page.common;
-            if ref_to_parent.get(common.ref_id.as_str()).is_some() {
+            if ref_to_parent.contains_key(common.ref_id.as_str()) {
                 continue; // skip non-root pages
             }
             doc.push(to_nav_json_recursive(common, &ref_to_compound))
